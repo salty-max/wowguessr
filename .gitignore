@@ -1,0 +1,3 @@
+# the harness's local state
+.harness/
+.cache/

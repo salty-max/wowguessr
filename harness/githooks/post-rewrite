@@ -1,0 +1,4 @@
+#!/bin/sh
+# harness 64a957092: a copy; edit it in the harness repository instead
+# Nothing of the harness's here: the repository's own post-rewrite, if any.
+exec "$(dirname "$0")/_chain" post-rewrite "$@"

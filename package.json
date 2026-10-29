@@ -1,0 +1,9 @@
+{
+  "name": "geoguessr",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "check": "bun test"
+  }
+}

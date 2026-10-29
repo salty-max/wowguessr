@@ -1,0 +1,16 @@
+# The harness's config (docs: harness/docs/design.md in the harness repository).
+[project]
+name = "geoguessr"
+
+[tools]
+dir = "harness"
+
+[defaults]
+check = "bun run check"
+rules = "CLAUDE.md"
+
+# [hooks]
+# trailers = true   # refuse AI co-author / "generated with" trailers
+# lock     = true   # a Claude session's commit wants its running card
+# stamp    = true   # a push wants a passing check on the tree
+# review   = true   # a push wants a recorded review
