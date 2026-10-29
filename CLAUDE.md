@@ -13,6 +13,11 @@ WoW addons folder but not an addon.
   once there is real code). Run it through q: `bun harness/q.ts check -- bun run check`.
 - `bun harness/board.ts list`, `bun harness/hooks.ts status`.
 
+## Docs
+
+- `docs/render-spike.md`: the render proof (offlineRenderer on macOS, the
+  patches, timings, what is open).
+
 ## Hard rules
 
 - **Render and look before shipping**: every picture and every page is
