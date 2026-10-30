@@ -2,8 +2,9 @@
 // picture and back, the areas under a guess, the score, the rounds drawn.
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { type Atlas, areaAt, distancePoints, type Frame, judge, pickRounds, type Round, ROUND_MAX, toPixel, toWorld } from "../src/atlas";
-import { CHUNK, ORIGIN } from "../src/ground";
+import { type Atlas, areaAt, distancePoints, type Frame, judge, onFrame, pickRounds, type Round, ROUND_MAX, toPixel, toWorld, zoneUnder } from "../src/atlas";
+import { areaRuns } from "../src/areas";
+import { CHUNK, type ChunkRow, Ground, ORIGIN } from "../src/ground";
 
 const frame: Frame = { map: 0, top: 4000, left: 2000, yards: 8, width: 500, height: 1000 };
 
@@ -29,7 +30,7 @@ const atlas: Atlas = {
   name: "Test",
   areas: { row0, col0, runs: [[12, 1, 87, 1, 0, 1]] },
   names: { 12: { name: "Elwynn Forest", zone: 12, parent: 0 }, 87: { name: "Goldshire", zone: 12, parent: 12 } },
-  labels: [],
+  zones: [{ ui: 1429, zone: 12, name: "Elwynn Forest", frame, inside: [] }],
 };
 // the middle of chunk k of the row
 const at = (k: number) => ({ x: ORIGIN - (row0 + 0.5) * CHUNK, y: ORIGIN - (col0 + k + 0.5) * CHUNK });
@@ -38,6 +39,18 @@ describe("the areas", () => {
   test("each chunk's area from its run", () => {
     expect([0, 1, 2, 3].map((k) => areaAt(atlas.areas, at(k).x, at(k).y))).toEqual([12, 87, 0, 0]);
     expect(areaAt(atlas.areas, at(0).x + CHUNK, at(0).y)).toBe(0); // the row above: none
+  });
+});
+
+describe("the zones' maps", () => {
+  test("a click on the continent opens the zone under it, none in the sea", () => {
+    expect(zoneUnder(atlas, at(1).x, at(1).y)?.ui).toBe(1429); // Goldshire: Elwynn's map
+    expect(zoneUnder(atlas, at(2).x, at(2).y)).toBeUndefined();
+  });
+  test("a point is on a frame's picture or not", () => {
+    expect(onFrame(frame, 3920, 1960)).toBe(true);
+    expect(onFrame(frame, 4100, 1960)).toBe(false); // north of its top
+    expect(onFrame(frame, 3920, 2100)).toBe(false); // west of its left
   });
 });
 
@@ -88,5 +101,26 @@ describe("a game's rounds", () => {
       expect(rounds.length).toBe(5);
       expect(new Set(rounds.map((r) => r.zone)).size).toBe(5);
     }
+  });
+});
+
+describe("the areas under a map (src/areas.ts)", () => {
+  // two chunks of ground in a sea: Elwynn at (row 101, col 201), Goldshire east of it
+  const chunk = (row: number, col: number, area_id: number) => ({ row, col, area_id }) as unknown as ChunkRow;
+  const ground = new Ground([chunk(101, 201, 12), chunk(101, 202, 87)]);
+  // a frame of 4 by 4 chunks from (row 100, col 200)
+  const f: Frame = { map: 0, top: ORIGIN - 100 * CHUNK, left: ORIGIN - 200 * CHUNK, yards: CHUNK, width: 4, height: 4 };
+  const a = areaRuns(ground, f);
+  test("the sea's rows at either end are left out, the row kept where it is", () => {
+    expect(a.row0).toBe(101);
+    expect(a.runs.length).toBe(1);
+  });
+  test("each chunk's area read back where the ground has it", () => {
+    const mid = (row: number, col: number) => [ORIGIN - (row + 0.5) * CHUNK, ORIGIN - (col + 0.5) * CHUNK] as const;
+    expect(areaAt(a, ...mid(101, 201))).toBe(12);
+    expect(areaAt(a, ...mid(101, 202))).toBe(87);
+    expect(areaAt(a, ...mid(101, 203))).toBe(0);
+    expect(areaAt(a, ...mid(100, 201))).toBe(0);
+    expect(areaAt(a, ...mid(102, 201))).toBe(0);
   });
 });

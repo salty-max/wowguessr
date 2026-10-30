@@ -1,9 +1,12 @@
-// The continent maps the game page is played on, shared by the build
-// (scripts/site.ts) and the page (web/game.ts). A map is our own picture of
-// wow-data's terrain (src/mapdraw.ts), never the game's map art, so its
-// frame is ours too: world yards in, pixels out, no bounds borrowed from
-// the world map. North up, west left: the game's x grows north and y west,
-// so a pixel's column counts yards west of the left edge backwards.
+// The maps the game page is played on, shared by the build (scripts/site.ts)
+// and the page (web/game.ts): the game's own world map art (the user's call,
+// 30 October 2026), each continent's and each zone's, composed by
+// src/mapart.ts. Each picture is 1002x668 over a world rectangle
+// (client_UiMapAssignment's Region, its UI rectangle the whole picture, its
+// pixels square: checked for every one), so a frame is its top edge (the
+// largest x), its left edge (the largest y) and the yards a pixel. North up,
+// west left: the game's x grows north and y west, so a pixel's column counts
+// yards west of the left edge backwards.
 import { CHUNK, ORIGIN } from "./ground";
 
 export type Frame = { map: number; top: number; left: number; yards: number; width: number; height: number };
@@ -30,15 +33,32 @@ export function areaAt(a: Areas, x: number, y: number): number {
   return 0;
 }
 
-// One continent as the page loads it: the picture's frame, the areas, each
-// area's name, zone and parent, and where to write each zone's name on the map.
+// A zone's map: its UiMap id (the picture is maps/zones/<ui>.webp), the
+// zone (AreaTable id), its name, its frame; inside: the cities whose maps
+// lie in it (Ironforge in Dun Morogh), opened from its view.
+export type ZoneMap = { ui: number; zone: number; name: string; frame: Frame; inside: number[] };
+
+// One continent as the page loads it: its picture's frame, the areas, each
+// area's name, zone and parent, and its zones' maps.
 export type Atlas = {
   frame: Frame;
   name: string;
   areas: Areas;
   names: Record<number, { name: string; zone: number; parent: number }>;
-  labels: { zone: number; name: string; px: number; py: number }[];
+  zones: ZoneMap[];
 };
+
+// the zone's map a click on the continent opens: the zone under it (a city's
+// own when the ground is the city's, Stormwind's), none in the sea
+export function zoneUnder(atlas: Atlas, x: number, y: number): ZoneMap | undefined {
+  const area = areaAt(atlas.areas, x, y), zone = atlas.names[area]?.zone;
+  return zone ? atlas.zones.find((z) => z.zone === zone) : undefined;
+}
+// true when a world point lies on a frame's picture
+export function onFrame(f: Frame, x: number, y: number): boolean {
+  const { px, py } = toPixel(f, x, y);
+  return px >= 0 && py >= 0 && px <= f.width && py <= f.height;
+}
 
 // One picture to guess, as the page loads it (site.ts writes them from
 // locations.json): no yaw, no landmark keys, nothing the page doesn't use.

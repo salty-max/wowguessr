@@ -1,8 +1,8 @@
 # geoguessr (working title)
 
 A WoW Classic geoguessr: a web game that shows a picture of a spot in
-Azeroth, the player clicks the continent map, a score falls with the
-distance. The pictures are **rendered from the game files** (not captured
+Azeroth, the player opens a zone's map from the continent's and clicks where
+it was, a score falls with the distance. The pictures are **rendered from the game files** (not captured
 in game). Plan and evidence: `~/code/wow-addons/ideas/geoguessr.md`. A
 one-repository project (bun, no addon, no kit sync, no TOC), under the
 WoW addons folder but not an addon.
@@ -16,10 +16,11 @@ WoW addons folder but not an addon.
 - `bun scripts/render.ts --renderer <binary> --workdir <dir> --casc <dir>`: a sample rendered,
   checked and laid on contact sheets in `.cache/renders/` (`--all`: every one).
 - `bun run dev`: the game page at http://127.0.0.1:4195 (the family's
-  `geoguessr-game` launch entry): `scripts/site.ts` builds `site/` (the maps
-  drawn from wow-data, the rounds, the pictures from `.cache/review3/webp`,
-  the page bundled; `--maps` redraws the maps, `--marks` draws every camera
-  on them), `scripts/serve.ts` serves it. Never committed.
+  `geoguessr-game` launch entry): `scripts/site.ts` builds `site/` (the
+  game's world maps composed, the rounds, the pictures from
+  `.cache/review3/webp`, the page bundled; `--maps` composes the maps again,
+  `--marks` draws every camera on its zone's map), `scripts/serve.ts` serves
+  it. Never committed.
 - `bun harness/board.ts list`, `bun harness/hooks.ts status`.
 
 ## Docs
@@ -28,8 +29,8 @@ WoW addons folder but not an addon.
   patches, timings, what is open).
 - `docs/picker.md`: the landmark picker (what a landmark is, how its camera is
   chosen, locations.json, the samples looked at, the first picker's history).
-- `docs/game.md`: the game page (a game, the score, our own continent maps
-  drawn from the terrain, the yards-to-pixels frame and how it was checked).
+- `docs/game.md`: the game page (a game, the score, the game's world maps
+  and their frames, how the conversion was checked).
 
 ## Hard rules
 
@@ -37,8 +38,11 @@ WoW addons folder but not an addon.
   opened and looked at before it counts as done.
 - **Ship only rendered pictures, never Blizzard's files**: no M2, WMO, BLP,
   ADT, CASC data or listfile in this repository, committed or not. The
-  continent maps are drawn from wow-data's terrain, never the game's map art. The
-  renderer and its build live in a scratch folder outside it.
+  renderer and its build live in a scratch folder outside it. One exception,
+  the user's call (30 October 2026): the game page's maps are the game's own
+  world map art (PNGs from wow-data's mirror), composed into `site/` and
+  `--marks`' `.cache/site/` only (both gitignored), never committed. Putting them on a public page is the user's go, asked
+  before any deploy.
 - **No deploy, no GitHub repository, no domain, no push** without the user's
   go, asked in the session that wants it.
 - Local git only for now. The client for renders is

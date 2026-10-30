@@ -1,14 +1,15 @@
-// The game page: five rounds, each a rendered picture, a guess on one of
-// the two continents' maps (src/mapdraw.ts' pictures of wow-data's terrain),
-// the distance and the score (src/atlas.ts), then a summary. Static: it
-// reads site/'s rounds.json and maps/ (scripts/site.ts) and keeps nothing.
-import { type Atlas, judge, pickRounds, type Result, ROUND_MAX, type Round, toPixel, toWorld, areaAt } from "../src/atlas";
+// The game page: five rounds, each a rendered picture, a guess on the
+// game's own world maps (a continent, then a zone's map opened by a click on
+// it, as the game's map does), the distance and the score (src/atlas.ts),
+// then a summary. Static: it reads site/'s rounds.json and maps/
+// (scripts/site.ts) and keeps nothing.
+import { areaAt, type Atlas, type Frame, judge, onFrame, pickRounds, type Result, ROUND_MAX, type Round, toPixel, toWorld, type ZoneMap, zoneUnder } from "../src/atlas";
 
 const ROUNDS = 5;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const picture = $<HTMLImageElement>("picture"), mapImg = $<HTMLImageElement>("map"), viewport = $("viewport"), stage = $("stage");
 const overlay = document.getElementById("overlay") as unknown as SVGSVGElement;
-const labels = $("labels"), marks = $("marks"), hover = $("hover"), continents = $("continents");
+const marks = $("marks"), hover = $("hover"), continents = $("continents"), zonebar = $("zonebar");
 const guessBtn = $<HTMLButtonElement>("guess"), nextBtn = $<HTMLButtonElement>("next"), hint = $("hint"), result = $("result");
 const roundEl = $("round"), totalEl = $("total"), game = $("game"), summary = $("summary");
 
@@ -21,20 +22,25 @@ const [all, ...maps] = await Promise.all([
   fetch("maps/1.json").then((r) => r.json() as Promise<Atlas>),
 ]);
 const atlas = new Map(maps.map((a) => [a.frame.map, a]));
+const zoneMap = (map: number, ui: number) => atlas.get(map)!.zones.find((z) => z.ui === ui)!;
 
-// --- the map: one continent at a time, zoomed and panned by a transform ---
-let shown = 0, scale = 1, tx = 0, ty = 0;
+// --- the map: a continent or one of its zones, zoomed and panned by a transform ---
+let shown = 0, zone: ZoneMap | null = null, scale = 1, tx = 0, ty = 0;
 const view = { minScale: 0.1, maxScale: 4 };
+const frame = (): Frame => zone?.frame ?? atlas.get(shown)!.frame;
 function apply() {
+  // the picture keeps the box covered (or stays in its middle, smaller than it)
+  const f = frame(), w = viewport.clientWidth, h = viewport.clientHeight, W = f.width * scale, H = f.height * scale;
+  tx = W <= w ? (w - W) / 2 : Math.min(0, Math.max(w - W, tx));
+  ty = H <= h ? (h - H) / 2 : Math.min(0, Math.max(h - H, ty));
   stage.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
   stage.style.setProperty("--s", String(scale));
-  // the zones' names smaller when the whole continent shows, full size zoomed in
-  stage.style.setProperty("--ls", String(Math.min(1, Math.max(0.62, scale / 0.4)) / scale));
 }
 function fit() {
-  const f = atlas.get(shown)!.frame, w = viewport.clientWidth, h = viewport.clientHeight;
+  const f = frame(), w = viewport.clientWidth, h = viewport.clientHeight;
   scale = Math.min(w / f.width, h / f.height);
   view.minScale = scale * 0.9;
+  view.maxScale = scale * 4;
   tx = (w - f.width * scale) / 2;
   ty = (h - f.height * scale) / 2;
   apply();
@@ -46,37 +52,60 @@ function zoomAt(k: number, cx: number, cy: number) {
   scale = next;
   apply();
 }
-function show(map: number) {
+// show a continent (ui null) or one of its zones' maps
+function show(map: number, ui: number | null = null) {
   // a pin on the other continent would be judged unseen: a switch before the reveal drops it
   if (map !== shown && !revealed && guess) {
     guess = null;
     guessBtn.disabled = true;
   }
   shown = map;
-  const a = atlas.get(map)!;
-  mapImg.src = `maps/${map}.webp`;
-  mapImg.width = a.frame.width;
-  mapImg.height = a.frame.height;
-  overlay.setAttribute("viewBox", `0 0 ${a.frame.width} ${a.frame.height}`);
-  overlay.setAttribute("width", String(a.frame.width));
-  overlay.setAttribute("height", String(a.frame.height));
-  stage.style.width = `${a.frame.width}px`;
-  stage.style.height = `${a.frame.height}px`;
-  labels.innerHTML = a.labels.map((l) => `<span style="left:${l.px}px;top:${l.py}px">${esc(l.name)}</span>`).join("");
+  zone = ui == null ? null : zoneMap(map, ui);
+  const f = frame();
+  mapImg.src = zone ? `maps/zones/${zone.ui}.webp` : `maps/${map}.webp`;
+  mapImg.width = f.width;
+  mapImg.height = f.height;
+  overlay.setAttribute("viewBox", `0 0 ${f.width} ${f.height}`);
+  overlay.setAttribute("width", String(f.width));
+  overlay.setAttribute("height", String(f.height));
+  stage.style.width = `${f.width}px`;
+  stage.style.height = `${f.height}px`;
   for (const b of continents.querySelectorAll("button")) b.classList.toggle("on", Number(b.dataset.map) === map);
+  bar();
+  hover.textContent = "";
   fit();
   drawMarks();
+}
+// the line over the map: where it is, the way back, the cities inside
+function bar() {
+  const a = atlas.get(shown)!;
+  if (!zone) {
+    zonebar.innerHTML = `<span>${esc(a.name)}: click a zone to open its map</span>`;
+    return;
+  }
+  const parent = a.zones.find((z) => z.inside.includes(zone!.ui));
+  zonebar.innerHTML = [
+    `<button data-ui="">&lsaquo; ${esc(a.name)}</button>`,
+    parent ? `<button data-ui="${parent.ui}">&lsaquo; ${esc(parent.name)}</button>` : "",
+    `<b>${esc(zone.name)}</b>`,
+    ...zone.inside.map((ui) => `<button data-ui="${ui}">${esc(zoneMap(shown, ui).name)} &rsaquo;</button>`),
+  ].join("");
 }
 continents.innerHTML = [...atlas.values()].map((a) => `<button data-map="${a.frame.map}">${esc(a.name)}</button>`).join("");
 continents.addEventListener("click", (e) => {
   const b = (e.target as HTMLElement).closest("button");
   if (b) show(Number(b.dataset.map));
 });
+zonebar.addEventListener("click", (e) => {
+  const b = (e.target as HTMLElement).closest("button");
+  if (b) show(shown, b.dataset.ui ? Number(b.dataset.ui) : null);
+});
 
-// the point under the pointer, in the map's pixels
+// the point under the pointer: on the viewport, on the picture, in the world
 const local = (e: { clientX: number; clientY: number }) => {
   const r = viewport.getBoundingClientRect();
-  return { vx: e.clientX - r.left, vy: e.clientY - r.top, px: (e.clientX - r.left - tx) / scale, py: (e.clientY - r.top - ty) / scale };
+  const vx = e.clientX - r.left, vy = e.clientY - r.top, px = (vx - tx) / scale, py = (vy - ty) / scale;
+  return { vx, vy, px, py, ...toWorld(frame(), px, py) };
 };
 viewport.addEventListener("wheel", (e) => {
   e.preventDefault();
@@ -86,7 +115,7 @@ viewport.addEventListener("wheel", (e) => {
 $("zoom-in").addEventListener("click", () => zoomAt(1.5, viewport.clientWidth / 2, viewport.clientHeight / 2));
 $("zoom-out").addEventListener("click", () => zoomAt(1 / 1.5, viewport.clientWidth / 2, viewport.clientHeight / 2));
 
-// a drag pans, a pinch zooms, a press that hardly moved places the guess
+// a drag pans, a pinch zooms, a press that hardly moved opens a zone or places the guess
 const pointers = new Map<number, { x: number; y: number }>();
 let moved = 0, pinch = 0;
 viewport.addEventListener("pointerdown", (e) => {
@@ -102,8 +131,12 @@ viewport.addEventListener("pointerdown", (e) => {
 viewport.addEventListener("pointermove", (e) => {
   const p = pointers.get(e.pointerId);
   if (!p) {
-    const { px, py } = local(e), a = atlas.get(shown)!, w = toWorld(a.frame, px, py), area = areaAt(a.areas, w.x, w.y);
-    hover.textContent = area && a.names[area] ? zoneLine(a, area) : "";
+    const at = local(e), a = atlas.get(shown)!;
+    if (zone) {
+      const area = areaAt(a.areas, at.x, at.y);
+      hover.textContent = area && a.names[area] ? areaLine(a, area) : "";
+    } else hover.textContent = zoneUnder(a, at.x, at.y)?.name ?? "";
+    viewport.classList.toggle("opens", !zone && hover.textContent !== "");
     return;
   }
   if (pointers.size === 2) {
@@ -127,59 +160,74 @@ const release = (e: PointerEvent) => {
   if (!pointers.has(e.pointerId)) return;
   pointers.delete(e.pointerId);
   if (pointers.size < 2) pinch = 0;
-  if (pointers.size === 0 && moved < 6 && e.type === "pointerup") place(e);
+  if (pointers.size === 0 && moved < 6 && e.type === "pointerup") press(e);
 };
 viewport.addEventListener("pointerup", release);
 viewport.addEventListener("pointercancel", release);
 viewport.addEventListener("pointerleave", () => (hover.textContent = ""));
 
-// the zone (and the subzone) under a point, as the hover line says it
-function zoneLine(a: Atlas, area: number) {
+// the area (and its zone) under a point, as the hover line says it
+function areaLine(a: Atlas, area: number) {
   const n = a.names[area], zone = a.names[n.zone]?.name ?? "";
   return n.zone === area || !zone ? n.name : `${n.name}, ${zone}`;
 }
 
 // --- a game ---
 let rounds: Round[] = [], at = 0, total = 0;
-let guess: { map: number; x: number; y: number } | null = null;
-const results: { round: Round; guess: { map: number; x: number; y: number }; result: Result }[] = [];
+let guess: { map: number; x: number; y: number; ui: number } | null = null;
+const results: { round: Round; guess: { map: number; x: number; y: number; ui: number }; result: Result }[] = [];
 let revealed = false;
 
-function place(e: PointerEvent) {
+function press(e: PointerEvent) {
+  const p = local(e), f = frame();
+  if (p.px < 0 || p.py < 0 || p.px > f.width || p.py > f.height) return;
+  // the continent: open the zone under the click
+  if (!zone) {
+    const z = zoneUnder(atlas.get(shown)!, p.x, p.y);
+    if (z) show(shown, z.ui);
+    return;
+  }
   if (revealed) return;
-  const { px, py } = local(e), a = atlas.get(shown)!;
-  if (px < 0 || py < 0 || px > a.frame.width || py > a.frame.height) return;
-  guess = { map: shown, ...toWorld(a.frame, px, py) };
+  guess = { map: shown, x: p.x, y: p.y, ui: zone.ui };
   guessBtn.disabled = false;
   drawMarks();
 }
 
-function pin(cls: string, map: number, x: number, y: number, title: string) {
-  if (map !== shown) return "";
-  const { px, py } = toPixel(atlas.get(map)!.frame, x, y);
+function pin(cls: string, x: number, y: number, title: string) {
+  const { px, py } = toPixel(frame(), x, y);
   return `<i class="pin ${cls}" style="left:${px}px;top:${py}px" title="${esc(title)}"></i>`;
 }
+const here = (p: { map: number; x: number; y: number } | null): p is { map: number; x: number; y: number } => !!p && p.map === shown && onFrame(frame(), p.x, p.y);
 function drawMarks() {
   const r = rounds[at];
-  let html = guess ? pin("guess", guess.map, guess.x, guess.y, "Your guess") : "";
+  let html = here(guess) ? pin("guess", guess.x, guess.y, "Your guess") : "";
   overlay.innerHTML = "";
   if (revealed && r) {
-    html += pin("truth", r.map, r.x, r.y, r.name);
+    if (here(r)) html += pin("truth", r.x, r.y, r.name);
     if (guess && guess.map === r.map && r.map === shown) {
-      const f = atlas.get(shown)!.frame, g = toPixel(f, guess.x, guess.y), t = toPixel(f, r.x, r.y);
+      const g = toPixel(frame(), guess.x, guess.y), t = toPixel(frame(), r.x, r.y);
       overlay.innerHTML = `<line x1="${g.px}" y1="${g.py}" x2="${t.px}" y2="${t.py}" />`;
     }
   }
   marks.innerHTML = html;
 }
 
-// frame the guess and the truth together after a reveal
+// after a reveal: the first map holding the guess and the truth (the
+// round's zone, the zone around it when it is a city, the map the guess was
+// placed on), else the continent, framed on both together
+function reveal(r: Round) {
+  const a = atlas.get(r.map)!, own = a.zones.find((z) => z.zone === r.zone);
+  const tries = [own, own && a.zones.find((z) => z.inside.includes(own.ui)), guess && a.zones.find((z) => z.ui === guess!.ui)];
+  const both = guess && guess.map === r.map ? tries.find((z) => z && onFrame(z.frame, r.x, r.y) && onFrame(z.frame, guess!.x, guess!.y)) : undefined;
+  show(r.map, both?.ui ?? (guess && guess.map === r.map ? null : own?.ui ?? null));
+  frameBoth(r);
+}
 function frameBoth(r: Round) {
-  const f = atlas.get(r.map)!.frame, t = toPixel(f, r.x, r.y);
+  const f = frame(), t = toPixel(f, r.x, r.y);
   const g = guess && guess.map === r.map ? toPixel(f, guess.x, guess.y) : t;
-  const w = viewport.clientWidth, h = viewport.clientHeight, pad = 80;
+  const w = viewport.clientWidth, h = viewport.clientHeight, pad = 60;
   const spanX = Math.abs(g.px - t.px) + 1, spanY = Math.abs(g.py - t.py) + 1;
-  scale = Math.max(view.minScale, Math.min(view.maxScale * 0.25, (w - 2 * pad) / spanX, (h - 2 * pad) / spanY));
+  scale = Math.max(view.minScale, Math.min(view.maxScale / 2, (w - 2 * pad) / spanX, (h - 2 * pad) / spanY));
   tx = w / 2 - ((g.px + t.px) / 2) * scale;
   ty = h / 2 - ((g.py + t.py) / 2) * scale;
   apply();
@@ -228,9 +276,7 @@ guessBtn.addEventListener("click", () => {
   const bonus = [res.zone ? `right zone +500` : "", res.subzone ? `right subzone +500` : ""].filter(Boolean).join(", ");
   result.innerHTML = `<p class="place">${esc(place)}</p><p>${where}</p><p class="points">${fmt(res.points)} points${bonus ? ` <small>(${fmt(res.distance)} for the distance, ${bonus})</small>` : ""}</p>`;
   result.hidden = false;
-  if (shown !== r.map) show(r.map);
-  else drawMarks();
-  frameBoth(r);
+  reveal(r);
 });
 
 nextBtn.addEventListener("click", () => {
