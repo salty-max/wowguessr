@@ -189,9 +189,16 @@ Ashenvale's north), 1 flagged by the image test (Northpass Tower). Looked at
 whole, 8 contact sheets: the draft drop list is 17 more, frames with no
 landmark worth guessing from (a snow mound, a bare hill, rocks, a shell on
 Misty Reed Strand, a branch in the face at Crown Guard Tower, Fire Plume
-Ridge's dark rocks). That leaves about 200 for the user's eye pass
-(`.cache/batch3/review.html`, served by the `geoguessr-review` launch entry:
-red is the draft, a click drops or keeps, the list to copy at the top).
+Ridge's dark rocks), and 58 near-duplicates: in a zone, the same WMO model
+pictured twice (Duskwood's farmsteads, Stranglethorn's troll ruins, the
+Witherbark yurts), then the same place twice (Moonbrook, Stonewatch Tower,
+Garren's Haunt), the best-scored one kept each time (the model first, so a
+place whose only other picture is a unique building keeps it). That leaves
+142 for the user's eye pass (`.cache/batch3/review.html`, served by the
+`geoguessr-review` launch entry: red is nothing to guess from, orange a
+near-duplicate, a click drops or keeps, the list to copy at the top). The
+model rule takes some distinct places that only share a building, a choice
+for the user's pass.
 
 Colour, by eye: the snow, Elwynn, Westfall, Stranglethorn, Ashenvale,
 Mulgore and Desolace read right. Still strong: Durotar's orange sky and

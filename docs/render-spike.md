@@ -226,8 +226,12 @@ Morogh, Elwynn, Westfall), `GEO_*` switches on the scratch build:
 
 Kept as the renderer's defaults: the sun 0.2, the ambient 0.5, the fog 0.3
 (each `GEO_*` switch overrides, 1 = the data as it is). Before and after on
-11 cameras (`.cache/light3/before-after.jpg`): the Plaguelands and
-Winterspring calmer, Dun Morogh, Elwynn and Westfall unchanged.
+11 cameras (`.cache/light3/before-after.jpg`) are nearly the same picture:
+this pass only calmed Winterspring and the Eastern Plaguelands a little, and
+left Dun Morogh, Elwynn and Westfall as they were. The red and orange zones
+(Durotar, the Badlands, the Searing Gorge, Silithus) are untouched by it.
+They stay as they are until an in-game screenshot shows how far they are
+from the client.
 
 **What stays strong, and is probably the game's own look (not verified):**
 the Badlands' and the Searing Gorge's red is their rock textures', not the
