@@ -446,3 +446,15 @@ to #671 0.92), and Dandred's Fold (#490) left Alterac, its slot taken by
 Gallows' Corner (#672). Nobody chose those three: they are the picker's. Thoradin's
 Wall's two frames look alike (one wall across two zones): #682 is orange
 on the review page, the user's call.
+
+## The eye pass (30 October 2026)
+
+The user took the merged page as it stood: every draft drop is theirs now
+(`by: "user"`, 87), and #682, Thoradin's Wall's second frame, went too.
+`choose` keeps one picture a name in a zone, not across zones, so each run
+brought the next piece of the wall back to Hillsbrad (#686 to #689): those
+four were dropped unrendered, by the same reason, until none came. 341
+cameras, 92 drops: 88 judged by eye, 4 by that rule. Each drop's own id comes
+first in its `why`: the picker reserves it from there. A name dropped in one zone
+because another zone has it would be better as one rule than as entries
+by placement, if it comes up again.

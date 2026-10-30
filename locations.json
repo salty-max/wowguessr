@@ -3,9 +3,9 @@
  "wowData": "db-f7bdfe672b67",
  "terrainBuild": "1.15.9.70576",
  "terrainParser": "cc0c2f9d",
- "landmarks": 1264,
+ "landmarks": 1261,
  "unseen": 500,
- "dropped": 87,
+ "dropped": 92,
  "extras": [
   {
    "name": "Fire Plume Ridge",
@@ -52,7 +52,7 @@
   "Eastern Plaguelands": 12,
   "Darkshore": 5,
   "Mulgore": 8,
-  "Hillsbrad Foothills": 8,
+  "Hillsbrad Foothills": 7,
   "Ashenvale": 12,
   "Feralas": 10,
   "Felwood": 6,
@@ -120,7 +120,7 @@
   "Teldrassil": 6,
   "Thunder Bluff": 6
  },
- "nextId": 686,
+ "nextId": 690,
  "locations": [
   {
    "id": 2,
@@ -7963,29 +7963,6 @@
    "fill": 0.21,
    "sky": 0.24,
    "score": 1.13
-  },
-  {
-   "id": 682,
-   "map": 0,
-   "x": -1066.96,
-   "y": -1575.07,
-   "z": 57.29,
-   "yaw": 1.178,
-   "pitch": 0.123,
-   "lookAt": [
-    -1019.01,
-    -1459.31,
-    72.81
-   ],
-   "ground": 47.29,
-   "zone": 267,
-   "subzone": 1057,
-   "name": "Thoradin's Wall",
-   "kind": "building",
-   "wmo": 179488,
-   "fill": 0.24,
-   "sky": 0.1,
-   "score": 1.03
   },
   {
    "id": 683,
