@@ -69,6 +69,28 @@ for (const map of MAPS) {
 }
 
 const names = new Map((db.query("SELECT ID, AreaName_lang n FROM client_AreaTable ORDER BY ID").all() as { ID: number; n: string }[]).map((a) => [a.ID, a.n]));
+// a subzone is a place unless it is mostly water (WATERY of its ground's
+// cells under a liquid: a sea, a coast, a strand) and neither paints itself on
+// the world map (WorldMapOverlay) nor gives experience for finding it
+// (ExplorationLevel): Longshore, the Veiled Sea, Fray Island go; Feathermoon
+// Stronghold (37% water), Lost Rigger Cove (on the map) stay
+const WATERY = 0.6;
+const onMap = new Set<number>();
+for (const o of db.query("SELECT AreaID_0 a, AreaID_1 b, AreaID_2 c, AreaID_3 d FROM client_WorldMapOverlay ORDER BY ID").all() as Record<string, number>[])
+  for (const v of Object.values(o)) if (v) onMap.add(v);
+const explored = new Set((db.query("SELECT ID FROM client_AreaTable WHERE ExplorationLevel > 0 ORDER BY ID").all() as { ID: number }[]).map((a) => a.ID));
+const wet = new Map<number, { cells: number; under: number }>();
+for (const [, ground] of grounds)
+  for (const c of ground.all) {
+    const w = wet.get(c.area_id) ?? { cells: 0, under: 0 };
+    w.cells += 64;
+    if (c.liquid_type != null && c.liquid_cells) for (const byte of c.liquid_cells) for (let i = 0; i < 8; i++) w.under += (byte >> i) & 1;
+    wet.set(c.area_id, w);
+  }
+const place = (area: number) => {
+  const w = wet.get(area);
+  return explored.has(area) || onMap.has(area) || !w || w.under / w.cells < WATERY;
+};
 const name = (id: number) => names.get(id) ?? `area ${id}`;
 
 // the landmarks and the best viewpoint of each
@@ -77,7 +99,7 @@ let tried = 0, unseen = 0;
 for (const map of MAPS) {
   const world: World = { ground: grounds.get(map)!, wmos: boxes.get(map)!, doodads: doodads.get(map)!, leaves: leaves.get(map)! };
   const rows = terrain.query("SELECT * FROM wmo_placement WHERE map_id = ? ORDER BY unique_id").all(map) as WmoRow[];
-  for (const l of landmarks(map, world.ground, rows, zoneOf)) {
+  for (const l of landmarks(map, world.ground, rows, zoneOf, place)) {
     const zone = zoneOf(l.area);
     if (!zones.has(zone)) continue;
     tried++;

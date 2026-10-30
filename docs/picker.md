@@ -32,9 +32,17 @@ code taken from it).
 A landmark is a WMO standing on the ground in a named place: its box rising 6
 yards over the ground at its middle (a cave's box barely clears the hill it
 is dug into), its foot no more than 6 over it (nothing in the sky; a crypt
-under a church goes deep and is fine: 15 of the chosen do, the Sepulcher,
-Agamand Mills, Deathknell), not in water (a wreck, a dock), 8 to 160 yards
-across, in a subzone (the zone alone names no place). A subzone keeps its
+under a church goes deep and is fine: the Sepulcher, Agamand Mills), not in water (a wreck, a dock), 8 to 160 yards
+across, in a subzone that is a place: the zone alone names none, nor does a
+subzone 60% or more under water that neither paints itself on the world map
+(`WorldMapOverlay`) nor gives experience for finding it (`ExplorationLevel`):
+a sea, a coast, a strand (Longshore, the Veiled Sea, Fray Island, the North
+Coast; Yojamba Isle, 73% water, goes with them). Neither signal alone would
+do: starting areas and many towns give no experience (Deathknell, Thorium
+Point), and the overlays miss some (Feathermoon Stronghold, 37% water, stays
+by its dry ground). Lakes on the map stay (Lake Everstill names
+Lakeshire's view across it: a name a player may not tie to the town). A
+subzone keeps its
 biggest and a second 80 yards away. Its name is the subzone's (the inn of
 Goldshire is "Goldshire"). A camera looks at its lower middle (a tall
 tower's top is sky, its door is the place).
@@ -48,7 +56,8 @@ cities (Stormwind, Orgrimmar, Thunder Bluff, Darnassus) have no landmark yet.
 
 16 bearings, 4 distances (12, 30, 55 and 80 yards beyond the box's corners,
 at least 25 from its middle), eyes 3, 6 and 10 yards over the ground (a hill
-or a bridge beats eye level):
+or a bridge beats eye level), looking down 12 degrees at most (the lens is 27
+degrees each way: the horizon stays in the picture, a place, not a map):
 
 1. **It can stand there** (`stand`, `src/pick.ts`): off the map, a hole,
    inside a building's box, within a yard of a solid doodad, water over the
@@ -89,13 +98,13 @@ hidden).
 
 ## The run (30 October 2026)
 
-571 landmarks tried, 248 with no good viewpoint (hidden by trees or
-hills, or no clear ground to stand on), 239 cameras chosen in 39 zones.
-Under 3: Deadwind Pass, the Searing Gorge and Felwood (1 each), the
-Badlands, the Swamp of Sorrows and Un'Goro Crater (2). None in the 4
-cities, Ironforge and Undercity (interiors), Teldrassil and Hyjal.
+552 landmarks tried, 252 with no good viewpoint (hidden by trees or
+hills, no clear ground to stand on, or seen only from above), 227 cameras
+chosen in 39 zones. Under 3: Deadwind Pass (1), Searing Gorge (1), Felwood (1), Badlands (2), Dustwallow Marsh (2), Darkshore (2), Un'Goro Crater (2). None in the
+4 cities, Ironforge and Undercity (interiors), Teldrassil and Hyjal. (Before
+the water rule and the look-down cap: 571 tried, 239 chosen in 39 zones.)
 
-## The sample (30 of the 239, by eye)
+## The first sample (30 of the 239, before the discovery rule, by eye)
 
 **27 of 30 recognisable as the place named** (the target was 24): the
 Crossroads, Camp Taurajo, Sentinel Hill, Light's Hope Chapel, Strahnbrad,

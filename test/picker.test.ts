@@ -177,8 +177,9 @@ describe("the landmarks", () => {
     expect(landmarks(0, g, [{ ...house(mx, my), min_z: 20, max_z: 52 }], zone99)).toEqual([]);
     // at most 2 a subzone, 80 yards apart
     expect(landmarks(0, g, [house(mx, my, 12, 1), house(mx + 30, my, 12, 2), house(mx + 120, my, 12, 3), house(mx - 120, my, 12, 4)], zone99).length).toBe(2);
-    // the zone itself is no named place
+    // the zone itself is no named place, nor a subzone a player never discovers (a sea, a coast)
     expect(landmarks(0, flat(), [house(mx, my)], zoneOf)).toEqual([]);
+    expect(landmarks(0, g, [house(mx, my)], zone99, () => false)).toEqual([]);
   });
   test("a viewpoint looks at the landmark, frames it, and sees it", () => {
     const g = new Ground(named(field()));
@@ -192,6 +193,16 @@ describe("the landmarks", () => {
     const d = Math.hypot(v.view.eye[0] - mx, v.view.eye[1] - my);
     expect(d).toBeGreaterThanOrEqual(25);
     expect(d).toBeLessThanOrEqual(100);
+  });
+  test("a camera looks down 12 degrees at most: a house in a pit 14 yards deep is seen from nowhere", () => {
+    // the house's chunk sunk to z 36, the ring around it at 50: from 25 yards
+    // with the eye 3 to 10 yards up, it is 30 to 45 degrees down
+    const pit = new Ground(named(field((r, c) => (r === 500 && c === 500 ? chunk(r, c, 36) : null))));
+    const sunk = { ...house(mx, my, 10), min_z: 35, max_z: 44 };
+    const world: World = { ground: pit, wmos: new Wmos([sunk]), doodads: new Doodads([]), leaves: new Doodads([]) };
+    const [l] = landmarks(0, pit, [sunk], zone99);
+    expect(l).toBeDefined();
+    expect(viewpoint(l, world)).toBeNull();
   });
   test("a heading with a rock in the face, or another house within 12 yards, isn't clear", () => {
     const g = new Ground(field());

@@ -25,15 +25,17 @@ export type Landmark = {
 const SMALLEST = 8, LOWEST = 6;
 // up to this many a subzone, this far apart
 const PER_AREA = 2, APART = 80;
+// the steepest a camera looks down at a landmark
+const STEEPEST = 12 * DEG;
 
 // The landmarks of a map: its WMOs standing on the ground (their box rising 6
 // yards over the ground at their middle: not a cave, whose box barely clears
 // the hill it is dug into; their foot no more than 6 over it: not a thing in
 // the sky; a crypt under a church goes deep and is fine), not in water (a
-// wreck, a dock), under
-// 160 yards across, in a named subzone, the biggest of a subzone first, a
-// second one 80 yards from it.
-export function landmarks(map: number, ground: Ground, rows: WmoRow[], zoneOf: (area: number) => number): Landmark[] {
+// wreck, a dock), under 160 yards across, in a named subzone that is a place
+// (place(area): scripts/pick.ts drops a sea, a coast, a strand), the biggest
+// of a subzone first, a second one 80 yards from it.
+export function landmarks(map: number, ground: Ground, rows: WmoRow[], zoneOf: (area: number) => number, place: (area: number) => boolean = () => true): Landmark[] {
   const all: Landmark[] = [];
   for (const w of rows) {
     const cx = (w.min_x + w.max_x) / 2, cy = (w.min_y + w.max_y) / 2;
@@ -41,7 +43,7 @@ export function landmarks(map: number, ground: Ground, rows: WmoRow[], zoneOf: (
     if (g == null || area == null || !area) continue;
     if (w.max_z - g < LOWEST || w.min_z > g + 6) continue;
     const size = Math.max(w.max_x - w.min_x, w.max_y - w.min_y);
-    if (size < SMALLEST || !isBuilding(w) || zoneOf(area) === area) continue;
+    if (size < SMALLEST || !isBuilding(w) || zoneOf(area) === area || !place(area)) continue;
     const floor = Math.max(w.min_z, g);
     // a wreck or a dock standing in the sea or a lake: water, not a place
     const water = ground.liquid(cx, cy);
@@ -93,7 +95,8 @@ export function clear(x: number, y: number, eye: number, yaw: number, world: Wor
 
 // The best viewpoint of a landmark, or null: 16 bearings, 4 distances (12,
 // 30, 55 and 80 yards beyond its box's corners, at least 25 from its
-// middle), eyes 3, 6 and 10 yards up. A camera must stand
+// middle), eyes 3, 6 and 10 yards up, looking down 12 degrees at most. A
+// camera must stand
 // (the picker's rules), see the landmark along a clear heading and frame it
 // (its box 12 to 75% of the picture, whole). The 12 best framed are cast
 // through (the ground, other WMOs, doodads with their leaves): kept when no
@@ -113,6 +116,9 @@ export function viewpoint(l: Landmark, world: World): Viewpoint | null {
       if ("reason" in s) continue;
       for (const height of [3, 6, 10]) {
         const eye = s.base + height;
+        // looking down no more than 12 degrees: the horizon stays in the
+        // picture (the lens is 27 degrees each way), a place, not a map
+        if (Math.atan2(l.at[2] - eye, distance) < -STEEPEST) continue;
         const yaw = Math.atan2(l.at[1] - y, l.at[0] - x);
         if (!clear(x, y, eye, yaw, world, l.box)) continue;
         const view: View = { eye: [x, y, eye], at: l.at };
