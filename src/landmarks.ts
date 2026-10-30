@@ -18,7 +18,13 @@ export type Landmark = {
   floor: number; // the ground under its middle: its part below is left out
   at: Vec; // the point a camera looks at
   size: number; // its footprint's longer side, yards
+  // what it is when not a building (a city's district, a camp) and its name
+  // when the subzone's isn't it (a district: WMOAreaTable's)
+  kind?: string;
+  name?: string;
 };
+// a landmark's name: its own, else its subzone's (nameOf)
+export const named = (nameOf: (area: number) => string) => (l: Landmark) => l.name ?? nameOf(l.area);
 
 // smaller than this across, or lower over the ground: a well, a cart, a
 // dock's planks, not a place (zoneNamed: a WMO on the zone's own unnamed
@@ -182,7 +188,7 @@ export function viewpoint(l: Landmark, world: World, limits: Limits = STRICT): V
 export function choose<T extends { landmark: Landmark; view: Viewpoint; zone: number }>(
   found: T[],
   want: Map<number, number>,
-  nameOf: (area: number) => string = String,
+  nameOf: (l: Landmark) => string = (l) => l.name ?? String(l.area),
   already: T[] = [],
 ): T[] {
   const out: T[] = [];
@@ -191,7 +197,7 @@ export function choose<T extends { landmark: Landmark; view: Viewpoint; zone: nu
     const kept: T[] = already.filter((f) => f.zone === zone);
     for (const f of list) {
       if (kept.length >= n) break;
-      if (kept.some((k) => nameOf(k.landmark.area) === nameOf(f.landmark.area) || k.landmark.box.file_id === f.landmark.box.file_id)) continue;
+      if (kept.some((k) => nameOf(k.landmark).toLowerCase() === nameOf(f.landmark).toLowerCase() || k.landmark.box.file_id === f.landmark.box.file_id)) continue;
       if (kept.some((k) => Math.hypot(k.landmark.at[0] - f.landmark.at[0], k.landmark.at[1] - f.landmark.at[1]) < APART)) continue;
       kept.push(f);
       out.push(f);

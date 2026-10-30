@@ -1,7 +1,8 @@
 // The location picker (ideas/geoguessr.md, step 3, landmark-first since 30
 // October 2026): from wow-data's databases only (classic.db and the ground's
 // classic-terrain.db), the landmarks of Eastern Kingdoms and Kalimdor (WMOs
-// standing in named places: src/landmarks.ts), the best viewpoint of each,
+// standing in named places: src/landmarks.ts; the cities' districts:
+// src/cities.ts), the best viewpoint of each,
 // then about --count of them spread over the zones that have a zone map, the
 // best first, leaving out the landmarks drops.json names (pictures looked at
 // and dropped) and filling their zone from the next best. Written to
@@ -12,7 +13,9 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import type { Database } from "bun:sqlite";
 import { familyPath } from "../src/family";
 import { type ChunkRow, type DoodadRow, Doodads, Ground, type WmoRow, Wmos } from "../src/ground";
-import { choose, type Landmark, type Limits, landmarks, STRICT, type Viewpoint, viewpoint, WIDE, type World } from "../src/landmarks";
+import { districts, EYE, type Group, type Placed } from "../src/cities";
+import type { Vec } from "../src/frame";
+import { choose, type Landmark, type Limits, landmarks, named, STRICT, type Viewpoint, viewpoint, WIDE, type World } from "../src/landmarks";
 import { quotas } from "../src/pick";
 
 const arg = (name: string, fallback: string) => {
@@ -22,6 +25,8 @@ const arg = (name: string, fallback: string) => {
 const COUNT = Number(arg("count", "300")), OUT = arg("out", "locations.json"), DROPS = arg("drops", "drops.json");
 // a zone with places gets at least MIN of them, at most CAP
 const MIN = 4, CAP = 12;
+// a city (its districts) at least this many
+const CITY = 6;
 // a doodad's whole box hides what is behind it over this share of its width
 const LEAF = Number(arg("leaf", "0.6"));
 const MAPS = [0, 1];
@@ -134,6 +139,49 @@ const seen = (limits: Limits, only?: Set<number>, skip = new Set<string>()) => {
 };
 const found = seen(STRICT);
 
+// the cities' districts (src/cities.ts): wow-data's wmo_group named by
+// client_WMOAreaTable, the camera where a creature stands or walks
+const areaName = new Map(
+  (db.query("SELECT WMOID w, NameSetID s, WMOGroupID g, AreaName_lang n, AreaTableID a FROM client_WMOAreaTable WHERE WMOGroupID <> -1 ORDER BY ID").all() as { w: number; s: number; g: number; n: string; a: number }[]).map(
+    (r) => [`${r.w}:${r.s}:${r.g}`, r],
+  ),
+);
+const groups: Group[] = [], allGroups: Placed[] = [];
+// (a district's key, -(placement * 1000 + group index), to its zone: a drop
+// of every district of a city still counts the city, as a 0)
+const districtZone = new Map<string, number>();
+for (const g of terrain.query("SELECT * FROM wmo_group ORDER BY map_id, unique_id, group_index").all() as (WmoRow & { map_id: number; group_index: number; group_id: number; wmo_id: number; name_set: number })[]) {
+  const key = g.unique_id * 1000 + g.group_index;
+  const row = { ...g, unique_id: -key, file_id: -key, map: g.map_id, placement: g.unique_id };
+  allGroups.push(row);
+  const a = areaName.get(`${g.wmo_id}:${g.name_set}:${g.group_id}`);
+  if (!a?.n || !a.a) continue;
+  const zone = zoneOf(a.a);
+  // (a group named for the city itself is no district)
+  if (!zones.has(zone) || a.n === name(zone)) continue;
+  districtZone.set(`${g.map_id}:${-key}`, zone);
+  groups.push({ ...row, index: g.group_index, name: a.n, zone });
+}
+const points = new Map<number, Vec[]>();
+for (const p of terrain.query("SELECT DISTINCT p.map_id, p.unique_id, p.min_x, p.min_y, p.min_z, p.max_x, p.max_y, p.max_z FROM wmo_placement p JOIN wmo_group g ON g.map_id = p.map_id AND g.unique_id = p.unique_id ORDER BY 1, 2").all() as (WmoRow & { map_id: number })[]) {
+  const box = [p.map_id, p.min_x, p.max_x, p.min_y, p.max_y, p.min_z, p.max_z];
+  const list = points.get(p.map_id) ?? points.set(p.map_id, []).get(p.map_id)!;
+  for (const table of ["spawn", "path"])
+    for (const r of db.query(`SELECT x, y, z FROM ${table} WHERE map_id = ? AND x BETWEEN ? AND ? AND y BETWEEN ? AND ? AND z BETWEEN ? AND ? ORDER BY x, y, z`).all(...box) as { x: number; y: number; z: number }[])
+      list.push([r.x, r.y, r.z]);
+}
+const NO_SHOT = { fill: 0, hidden: 0, sky: 0, near: 0 };
+for (const d of districts(groups, points, allGroups)) {
+  const g = d.group;
+  if (dropped.has(`${g.map}:${g.unique_id}`)) continue;
+  found.push({
+    landmark: { map: g.map, area: g.zone, box: g, floor: g.min_z, at: d.view.at, size: Math.max(g.max_x - g.min_x, g.max_y - g.min_y), kind: "district", name: g.name },
+    view: { view: d.view, shot: NO_SHOT, share: 0, distance: d.distance, height: EYE, score: 0.5 + Math.min(1, d.parts / 30) },
+    zone: g.zone,
+    widened: false,
+  });
+}
+
 // each zone's share by the square root of its size in map chunks, between
 // MIN (as many as it has) and CAP; a zone counts when it has a landmark
 // seen or a dropped one, so a drop list that empties one shows as a 0
@@ -144,6 +192,8 @@ for (const [, ground] of grounds) for (const c of ground.all) {
 }
 const have = new Set(found.map((f) => f.zone));
 for (const d of drops) {
+  const city = districtZone.get(`${d.map}:${d.wmo}`);
+  if (city) have.add(city);
   const w = rowsOf.get(d.map)?.find((r) => r.unique_id === d.wmo);
   const area = w && grounds.get(d.map)!.area((w.min_x + w.max_x) / 2, (w.min_y + w.max_y) / 2);
   if (area && zones.has(zoneOf(area))) have.add(zoneOf(area));
@@ -151,7 +201,8 @@ for (const d of drops) {
 const want = new Map(
   [...quotas(new Map([...zones].filter((z) => have.has(z)).map((z) => [z, Math.sqrt(size.get(z) ?? 1)])), COUNT)].map(([z, n]) => [z, Math.min(CAP, Math.max(MIN, n))]),
 );
-const first = choose(found, want, name);
+for (const z of new Set(found.filter((f) => f.landmark.kind === "district").map((f) => f.zone))) want.set(z, Math.min(CAP, Math.max(CITY, want.get(z) ?? 0)));
+const first = choose(found, want, named(name));
 // a zone left under its share, or with no strict landmark at all (MIN for
 // it): the looser landmarks (WIDE) for it alone, the first pass's names and
 // models kept out
@@ -159,7 +210,7 @@ const count = (list: Found[], z: number) => list.filter((f) => f.zone === z).len
 const shortWant = new Map([...zones].map((z) => [z, want.get(z) ?? MIN] as const).filter(([z, n]) => count(first, z) < n));
 const strict = new Set(found.map((f) => `${f.landmark.map}:${f.landmark.box.unique_id}`));
 const wide = seen(WIDE, new Set(shortWant.keys()), strict);
-const chosen = [...first, ...choose(wide, shortWant, name, first)];
+const chosen = [...first, ...choose(wide, shortWant, named(name), first)];
 for (const f of chosen) if (!want.has(f.zone)) want.set(f.zone, MIN);
 const tried = triedKeys.size, unseen = unseenKeys.size;
 
@@ -184,7 +235,7 @@ const picked = chosen.map((f) => {
     id: ids.get(`${f.landmark.map}:${f.landmark.box.unique_id}`) ?? nextId++, map: f.landmark.map, x: r2(x), y: r2(y), z: r2(z),
     yaw: Math.round(yaw * 1000) / 1000, pitch: Math.round(pitch * 1000) / 1000, lookAt: at.map(r2),
     ground: r2(z - f.view.height), zone: f.zone, subzone: f.landmark.area,
-    name: name(f.landmark.area), kind: "building", wmo: f.landmark.box.unique_id, ...(f.widened ? { widened: true } : {}),
+    name: named(name)(f.landmark), kind: f.landmark.kind ?? "building", wmo: f.landmark.box.unique_id, ...(f.widened ? { widened: true } : {}),
     fill: r2(f.view.shot.fill), sky: r2(f.view.shot.sky), score: r2(f.view.score),
   };
 });
@@ -196,7 +247,7 @@ writeFileSync(
   OUT,
   `${JSON.stringify(
     {
-      about: "Cameras for geoguessr's renders, each looking at a landmark (a WMO in a named place), by scripts/pick.ts from wow-data's classic.db and classic-terrain.db. x, y, z: world yards (the camera's eye). lookAt: the landmark's lower middle, world yards. yaw: the game's facing in radians (0 north, +x, a quarter turn west, +y), pitch: radians up, both toward lookAt. ground: the height the eye stands over. zone, subzone: AreaTable ids, name: the subzone's name, kind: building (the landmark's kind), wmo: the landmark's placement id, widened: found by the looser rules of a zone short of landmarks (src/landmarks.ts WIDE). fill, sky: the share of the picture the landmark and the sky take (a coarse cast), score: the viewpoint's. dropped: the entries drops.json lists. perZone: the cameras of each zone, share: what it was due (a zone under it ran short of landmarks). nextId: the id the next new camera takes (ids stay with their landmark from run to run).",
+      about: "Cameras for geoguessr's renders, each looking at a landmark (a WMO in a named place, or a city's district: a WMO group the client names), by scripts/pick.ts from wow-data's classic.db and classic-terrain.db. x, y, z: world yards (the camera's eye). lookAt: the landmark's lower middle, world yards. yaw: the game's facing in radians (0 north, +x, a quarter turn west, +y), pitch: radians up, both toward lookAt. ground: the height the eye stands over. zone, subzone: AreaTable ids (a district's subzone is its city), name: the subzone's name (a district's: client_WMOAreaTable's), kind: building or district, wmo: the landmark's placement id (a district's: -(placement * 1000 + group index)), widened: found by the looser rules of a zone short of landmarks (src/landmarks.ts WIDE). fill, sky: the share of the picture the landmark and the sky take (a coarse cast), score: the viewpoint's (a district: no cast, fill and sky 0, scored by its size). landmarks, unseen: the WMOs tried and those seen from nowhere (districts not counted). dropped: the entries drops.json lists. perZone: the cameras of each zone, share: what it was due (a zone under it ran short of landmarks). nextId: the id the next new camera takes (ids stay with their landmark from run to run).",
       wowData: tag,
       terrainBuild: terrainMeta("build"),
       terrainParser: terrainMeta("parser"),

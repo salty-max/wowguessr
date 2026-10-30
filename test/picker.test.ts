@@ -2,6 +2,7 @@
 import { describe, expect, test } from "bun:test";
 import { apart, CHUNK, type ChunkRow, type DoodadRow, Doodads, Ground, ORIGIN, solid, UNIT, type WmoRow, Wmos } from "../src/ground";
 import { boxShare, project, rayBox, rayGround, raySolid, shoot } from "../src/frame";
+import { districts, type Group, type Placed } from "../src/cities";
 import { choose, clear, landmarks, viewpoint, WIDE, type World } from "../src/landmarks";
 import { type Candidate, quotas, random, shuffle, stand } from "../src/pick";
 import { check } from "../src/imagecheck";
@@ -230,9 +231,9 @@ describe("the landmarks", () => {
     // zone 1: 2 (best), not 4 (70 yards from 2), not 6 (2's model), 7, not 1 (2's name); zone 2: 5
     expect(ids(choose(found, new Map([[1, 3], [2, 1]])))).toEqual([2, 7, 5]);
     // two areas of one name are one place
-    expect(ids(choose(found, new Map([[1, 3]]), (a) => (a === 13 ? "10" : String(a))))).toEqual([2]);
+    expect(ids(choose(found, new Map([[1, 3]]), (l) => (l.area === 13 ? "10" : String(l.area))))).toEqual([2]);
     // kept before: counted in the share, its name and model kept out
-    expect(ids(choose(found, new Map([[1, 2]]), String, [found[4]]))).toEqual([2]);
+    expect(ids(choose(found, new Map([[1, 2]]), undefined, [found[4]]))).toEqual([2]);
   });
   test("one notch looser for a zone short of landmarks: a hut, a tower on the zone's own ground", () => {
     const g = new Ground(named(field()));
@@ -240,6 +241,34 @@ describe("the landmarks", () => {
     expect(landmarks(0, g, [hut], zone99)).toEqual([]);
     expect(landmarks(0, g, [hut], zone99, () => true, WIDE).length).toBe(1);
     expect(landmarks(0, flat(), [house(mx, my)], zoneOf, () => true, WIDE).map((l) => l.area)).toEqual([12]);
+  });
+});
+
+describe("the cities' districts", () => {
+  const g = (name: string, index: number, x0: number, y0: number, x1: number, y1: number, z0 = 0, z1 = 20): Group =>
+    ({ unique_id: -index, file_id: -index, min_x: x0, min_y: y0, min_z: z0, max_x: x1, max_y: y1, max_z: z1, map: 0, placement: 7, index, name, zone: 1519 });
+  const on = (...p: [number, number, number][]) => new Map([[0, p]]);
+  test("the biggest group of a name, a camera where a creature stands 25 to 80 yards off, not in a room", () => {
+    const street = g("Trade District", 1, 0, 0, 100, 40), shop = g("Trade District", 2, 0, 50, 20, 70);
+    // a room no name reaches (a hall WMOAreaTable names for the city), 40 yards from the street's middle
+    const hall: Placed = { ...g("", 3, 80, 50, 100, 70), map: 0, placement: 7 };
+    const [d] = districts([street, shop], on([90, 60, 1], [50, 85, 0]), [street, shop, hall]);
+    expect(d.group).toBe(street);
+    // (90, 60) is 41 yards off but in the hall: (50, 85), 65 off, is the camera
+    expect(d.view.eye).toEqual([50, 85, 2.5]);
+    expect(d.view.at[0]).toBe(50);
+    // without the hall among every group, (90, 60) wins (nearer 40)
+    expect(districts([street, shop], on([90, 60, 1], [50, 85, 0]))[0].view.eye).toEqual([90, 60, 3.5]);
+    // looking down 12 degrees at most
+    expect(Math.atan2(d.view.at[2] - d.view.eye[2], 65)).toBeGreaterThanOrEqual(-12 * (Math.PI / 180) - 1e-9);
+  });
+  test("one a name whatever its case, a creature of the same map, none without one, none too small", () => {
+    const a = g("Tradesmen's Terrace", 1, 0, 0, 60, 60), b = g("Tradesmen's terrace", 2, 0, 0, 60, 60), tiny = g("Bank", 3, 0, 100, 10, 110);
+    // both cases share their creature: one district, not two
+    expect(districts([a, b, tiny], on([30, 70, 0], [0, 140, 0])).map((d) => d.group.name)).toEqual(["Tradesmen's Terrace"]);
+    expect(districts([a], new Map())).toEqual([]);
+    // a creature on the other continent at the same spot is no camera
+    expect(districts([a], new Map([[1, [[30, 70, 0]]]]))).toEqual([]);
   });
 });
 

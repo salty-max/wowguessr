@@ -55,6 +55,40 @@ Gadgetzan's walls). Its box is mostly air, so what a camera sees of it can't
 be told from the box (a first try showed "Tanaris" as empty sand). The
 cities (Stormwind, Orgrimmar, Thunder Bluff, Darnassus) have no landmark yet.
 
+## The cities' districts (`src/cities.ts`, 30 October 2026)
+
+A city is one big WMO (Stormwind's box is 1300 yards across, mostly air), so
+it has no landmark of its own. The client names its parts: WMO groups, in
+wow-data's `wmo_group` (each group's box turned and placed in the world,
+`classic-terrain.db`) and `client_WMOAreaTable` (Stormwind's Trade District,
+the Canals, Orgrimmar's Valley of Strength, Ironforge's Great Forge,
+Undercity's Apothecarium, Darnassus' terraces). A district is a name of one
+placement (Darnassus' "Tradesmen's terrace" and "Tradesmen's Terrace" are
+one), its landmark its biggest group 15 to 250 yards across. Its floor is the
+WMO's, not the terrain under it, and the boxes don't say where it is, so the
+camera stands where the game puts a creature (`spawn`, `path`: a guard's
+post, a patrol's waypoint, on the floor), 25 to 80 yards from the group's
+middle (best near 40), of the same map, not inside any group of the
+placement under 30 yards across (a shop, a room, named or not), its eye 2.5
+yards up, looking at the group's middle, down 12 degrees
+at most. No ray is cast (the groups' boxes overlap and are mostly air): the
+render says what it saw. Scored by how many groups carry the name (the
+Canals 52, the Trade District 37, the War Room 1): a big district first. A
+city gets at least 6 (`CITY`). Named for the city itself ("Stormwind City",
+"Orgrimmar") is no district. Its key in `drops.json` and locations.json's
+`wmo` is negative: -(placement * 1000 + group index).
+
+First renders (28, then 5, then 4): 21 of the first 28 read as their
+district, inside the city on its floor (Stormwind's Canals and Keep, the
+Ruins of Lordaeron, the Apothecarium, Darnassus' terraces, Grommash Hold,
+the Military Ward). The rest look into a wall a few yards off or are too
+dark (Ironforge's Tinker Town and Forlorn Cavern): 13 draft drops over the
+three rounds, each refilled by the next district of its city. Undercity is
+an interior city and stays so (its districts are its halls, the Ruins of
+Lordaeron its one outdoors). Thunder Bluff is terrain with small WMOs
+(each rise a WMO of its own, its groups unnamed but the Pools of Vision):
+no district.
+
 ## The viewpoint (`viewpoint`)
 
 16 bearings, 4 distances (12, 30, 55 and 80 yards beyond the box's corners,

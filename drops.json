@@ -357,6 +357,104 @@
    "name": "Thoradin's Wall",
    "why": "never rendered: the installed client lacks its files (#315)",
    "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": -10047289,
+   "name": "Dwarven District",
+   "why": "nothing to guess from (#326, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -7706082,
+   "name": "Tinker Town",
+   "why": "nothing to guess from (#335, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -352798046,
+   "name": "The Temple Gardens",
+   "why": "nothing to guess from (#345, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -352798031,
+   "name": "Temple of the Moon",
+   "why": "nothing to guess from (#347, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -10047151,
+   "name": "Cathedral of Light",
+   "why": "nothing to guess from (#350, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -7706037,
+   "name": "The Forlorn Cavern",
+   "why": "nothing to guess from (#355, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -165042070,
+   "name": "Valley of Honor",
+   "why": "nothing to guess from (#358, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -10047278,
+   "name": "Old Town",
+   "why": "nothing to guess from (#359, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -7706090,
+   "name": "The High Seat",
+   "why": "nothing to guess from (#361, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -7706044,
+   "name": "The Library",
+   "why": "nothing to guess from (#362, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -165042045,
+   "name": "Valley of Wisdom",
+   "why": "nothing to guess from (#363, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -7706041,
+   "name": "Hall of Arms",
+   "why": "nothing to guess from (#365, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -165042107,
+   "name": "Hall of the Brave",
+   "why": "nothing to guess from (#367, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -7706040,
+   "name": "Vault of Ironforge",
+   "why": "nothing to guess from (#368, widening of 30 October: a wall in the face or too dark)",
+   "by": "draft"
   }
  ],
  "empty": [
