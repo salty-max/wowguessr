@@ -37,15 +37,3 @@ export function check(p: Pixels): Check {
   const r = (v: number) => Math.round(v * 100) / 100;
   return { ok: !why.length, why, spread: r(all.spread), common: r(all.common), middleSpread: r(mid.spread), middleCommon: r(mid.common), mean: r(all.mean) };
 }
-
-// Gray-world white balance: each channel scaled so their means meet (the
-// renderer's daylight comes out orange), a channel's gain kept within 0.5-2.
-export function grayWorld(p: Pixels): Pixels {
-  const mean = [0, 0, 0];
-  for (let i = 0; i < p.rgb.length; i += 3) for (let c = 0; c < 3; c++) mean[c] += p.rgb[i + c];
-  const gray = (mean[0] + mean[1] + mean[2]) / 3;
-  const gain = mean.map((m) => (m ? Math.min(2, Math.max(0.5, gray / m)) : 1));
-  const out = new Uint8Array(p.rgb.length);
-  for (let i = 0; i < p.rgb.length; i++) out[i] = Math.min(255, Math.round(p.rgb[i] * gain[i % 3]));
-  return { ...p, rgb: out };
-}

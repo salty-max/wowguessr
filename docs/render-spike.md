@@ -11,7 +11,7 @@ from the game or from the renderer is committed here.
 | Risk (from the spike) | Answer |
 |---|---|
 | 1. Builds and runs on macOS, opens Classic 1.15.9 | **Yes**, with 10 small patches (below). MoltenVK 1.4 via Homebrew's Vulkan loader, Apple M2. CASC opens 1.15.9.70576 in milliseconds. |
-| 2. How a Classic render looks | **Recognisable at a glance**: Goldshire, the Crossroads and the Stormwind gate are each obvious, terrain, WMOs, doodads, sky, lamps all there. One flaw: daylight is tinted orange and oversaturated at every hour (night looks right). A gray-world auto-level on the PNG brings it most of the way back; the real fix is in the renderer's light colours. No creatures or players are drawn (fine for the game). |
+| 2. How a Classic render looks | **Recognisable at a glance**: Goldshire, the Crossroads and the Stormwind gate are each obvious, terrain, WMOs, doodads, sky, lamps all there. One flaw: daylight was tinted orange where the global default light applies (fixed at the source, 30 Oct: "The light" below). No creatures or players are drawn (fine for the game). |
 | 3. Cost per render | **About 1 to 2 s per 1280x720 image**, process start included, cold or warm (one process per image, no batch mode needed). Output is deterministic (same camera, same bytes). 10,000 images is roughly 3 to 5 hours on this machine. |
 
 Coordinates: the renderer takes the game's world coordinates (x, y, z in
@@ -63,8 +63,7 @@ temporary folder and will not survive a reboot: rebuild from the patch.
 - WebWowViewerCpp has **no licence file** (default copyright). Running it
   locally to make pictures is one thing; shipping it or a fork is not ours to
   do. Ask Deamon87, or keep it a local tool.
-- The orange daylight: fix in the renderer (the day light colours) or
-  colour-correct the PNGs.
+- The orange daylight: fixed at the source ("The light" below).
 - Cameras need rejection: the Crossroads shot has a post filling a fifth of
   the frame (the picker's job, spike step 3).
 
@@ -90,3 +89,73 @@ CASC root is a folder with a copy of it and links to the client's
 `Data/config`, `data`, `indices` and `ecache`. A camera whose frame needs a
 file the installed client hasn't downloaded hangs the renderer for ever
 (2 of the first 30): `scripts/render.ts` gives each 30 seconds.
+
+## The light (30 October 2026)
+
+**Why it was orange.** Classic 1.15 has no ZoneLight table (wago.tools: "Table
+not found"), so a zone with no point light of its own (Elwynn, Westfall and
+others) falls back to the global default light, Light 1, param 12, whose
+noon sun is `0xff8800`: (255, 136, 0), a pure orange. The export is right
+(its LightData matches wago.tools' at the pin, row for row), and the
+renderer reads the colours the right way round (the sky, through the same
+code, comes out blue). Its retail-tuned shader simply weights the direct
+light heavily, so a saturated sun paints everything it touches. Shown by
+renders of Goldshire with each colour set to neutral grey on a scratch copy
+of `export.db3`: grey ambient left it orange, a grey sun made it right.
+
+**The fix**, in the renderer, not on the picture: keep 0.35 of the direct
+light's saturation, the rest pulled to its luminance (`GEO_DIRECT_SAT`
+overrides it, 1 = the data as it is; `GEO_DIRECT_GAIN` scales it). Noon is
+fixed by `-time 1440` (render.ts' default). The hunk, on top of the macOS
+patch (the whole patch: `geoguessr-offlineRenderer-macos-light.patch` in the
+group's shared notes folder):
+
+```diff
+diff --git a/wowViewerLib/src/engine/objects/scenes/dayNightDataHolder/DayNightLightHolder.cpp b/wowViewerLib/src/engine/objects/scenes/dayNightDataHolder/DayNightLightHolder.cpp
+index c15fc7e6..dfd773d8 100644
+--- a/wowViewerLib/src/engine/objects/scenes/dayNightDataHolder/DayNightLightHolder.cpp
++++ b/wowViewerLib/src/engine/objects/scenes/dayNightDataHolder/DayNightLightHolder.cpp
+@@ -1,3 +1,4 @@
++#include <cstdlib>
+ //
+ // Created by Deamon on 7/5/2024.
+ //
+@@ -924,6 +925,20 @@ void DayNightLightHolder::calcLightParamResult(int lightParamId, const Config *c
+             exteriorColors.exteriorHorizontAmbientColor = exteriorColors.exteriorAmbientColor;
+ 
+         exteriorColors.exteriorDirectColor   = mixMembers<3>(lightParamData, &LightTimedData::directColor, blendTimeCoeff);
++        // geoguessr scratch: Classic's default light has a saturated orange
++        // sun (0xff8800 at noon) that this retail-tuned shader overweights.
++        // Keep 0.35 of the direct colour's saturation (GEO_DIRECT_SAT overrides,
++        // 1 = as the data has it), the rest pulled to its luminance;
++        // GEO_DIRECT_GAIN scales it.
++        {
++            const char *sat = std::getenv("GEO_DIRECT_SAT");
++            float k = sat ? std::atof(sat) : 0.35f;
++            auto &d = exteriorColors.exteriorDirectColor;
++            float lum = 0.299f * d.x + 0.587f * d.y + 0.114f * d.z;
++            d = mathfu::vec3(lum, lum, lum) + (d - mathfu::vec3(lum, lum, lum)) * k;
++        }
++        if (const char *gain = std::getenv("GEO_DIRECT_GAIN"))
++            exteriorColors.exteriorDirectColor = exteriorColors.exteriorDirectColor * (float) std::atof(gain);
+         exteriorColors.exteriorSpecularColor = mixMembers<3>(lightParamData, &LightTimedData::SunColor, blendTimeCoeff);
+ 
+         //Liquid colors
+```
+
+**Gray world is gone** from `scripts/render.ts`: it did more harm than good
+(Duskwood's grass turned red, Dun Morogh's snow pink, the Barrens' sky
+teal). The pictures are the renderer's colours as they come.
+
+**Before and after**, 13 cameras in Dun Morogh, the Barrens, the Swamp of
+Sorrows, Stormwind, Duskwood, Elwynn and Westfall (old pipeline, raw data
+light, after), looked at side by side (`.cache/light/before-after.jpg`, not
+committed): Elwynn's cobbles and trunks go from orange to grey and brown,
+Westfall from orange to gold, the rest barely move (their own lights are
+not the default). Dun Morogh, Stormwind and Duskwood read right.
+
+**Not verified**: the Barrens and the Swamp of Sorrows stay warm because
+their own lights are (the Barrens' sun `0xff9c56`, ambient `0x6a5742`; the
+swamp's sky is orange in the data). That is probably the game's own look,
+but no in-game picture of the same spot at noon was at hand to compare. One
+screenshot at the Crossroads at noon would settle it.

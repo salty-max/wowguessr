@@ -82,10 +82,12 @@ steep, 19 over a hole.
 `bun scripts/render.ts --renderer <binary> --workdir <dir> --casc <dir>
 [--sample 30]` renders a sample with the scratch offlineRenderer
 (`docs/render-spike.md`; run from its build folder, where its `spirv/`
-shaders and `export.db3` are), balances each picture's colours
-(gray world: the renderer's daylight is orange), runs the image check
+shaders and `export.db3` are; its light is fixed at the source, no colour
+balance after: `docs/render-spike.md`), runs the image check
 (`src/imagecheck.ts`: a frame or its middle third of one colour, or too dark)
-and writes `.cache/renders/` (the pictures, `report.json`, `sheet.jpg`).
+and writes `.cache/renders/` (or `--out`: the pictures, a 1024-wide WebP of
+each in `webp/`, `report.json`, contact sheets of 30 `sheet-NN.jpg`).
+`--all` renders every location.
 Never committed.
 
 ## The samples (30 cameras, seed 1, 30 October 2026)
@@ -106,8 +108,9 @@ Looked at on the contact sheet, not only tested.
   Badlands' orc camp, Duskwood's graveyard). The test catches 1 of the 9:
   textured walls (bark, rock, sand) pass it.
 - The sky is orange in the raw render itself in some zones (the Swamp of
-  Sorrows, the Burning Steppes): gray world turns it into a green-orange
-  band there. The fix belongs in the renderer's light colours.
+  Sorrows, the Burning Steppes): gray world turned it into a green-orange
+  band there. (Gray world is gone since, the light fixed in the renderer:
+  `docs/render-spike.md`, "The light".)
 
 - **Third pass** (the doodads' clearance): no
   trunk or doodad fills a frame any more (4 did in the second). 2 never

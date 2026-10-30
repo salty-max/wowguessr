@@ -13,7 +13,7 @@ WoW addons folder but not an addon.
 - `bun scripts/pick.ts`: `locations.json` from wow-data's classic.db and classic-terrain.db
   (`bun wow-data/bin/terrain.ts classic` first; `docs/picker.md`).
 - `bun scripts/render.ts --renderer <binary> --workdir <dir> --casc <dir>`: a sample rendered,
-  checked and laid on a contact sheet in `.cache/renders/`.
+  checked and laid on contact sheets in `.cache/renders/` (`--all`: every one).
 - `bun harness/board.ts list`, `bun harness/hooks.ts status`.
 
 ## Docs

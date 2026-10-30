@@ -1,13 +1,13 @@
 // Render cameras from locations.json with the scratch offlineRenderer
 // (docs/render-spike.md: built outside this repository, run from its build
-// folder, where its spirv/ shaders and export.db3 are), white-balance them, run the image check
-// on each, and make a contact sheet. Pictures and sheet go to .cache/renders/
-// (never committed).
+// folder, where its spirv/ shaders and export.db3 are), keep a 1024-wide WebP of each, run the image check on each, and lay them on
+// contact sheets of 30. Everything goes to --out (.cache/renders/, never
+// committed).
 //   bun scripts/render.ts --renderer <the offlineRenderer binary> --workdir <its build folder> --casc <CASC root>
-//     [--locations locations.json] [--sample 30] [--seed 1] [--ids 3,17] [--time 1440] [--size 1280x720]
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+//     [--locations locations.json] [--sample 30 | --all | --ids 3,17] [--seed 1] [--time 1440] [--size 1280x720] [--out .cache/renders]
+import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { check, grayWorld, type Pixels } from "../src/imagecheck";
+import { check, type Pixels } from "../src/imagecheck";
 import { random, shuffle } from "../src/pick";
 
 const arg = (name: string, fallback?: string) => {
@@ -21,7 +21,8 @@ const WORKDIR = path.resolve(arg("workdir", process.env.OFFLINE_RENDERER_WORKDIR
 const CASC = path.resolve(arg("casc", process.env.CASC_PATH));
 const [W, H] = arg("size", "1280x720").split("x").map(Number);
 const TIME = arg("time", "1440"); // half-minutes, noon
-const OUT = path.resolve(".cache/renders");
+const OUT = path.resolve(arg("out", ".cache/renders"));
+const PER_SHEET = 30;
 // the continents' WDTs (world/maps/<dir>/<dir>.wdt, wago.tools' file list)
 const WDT: Record<number, number> = { 0: 775971, 1: 782779 };
 
@@ -30,8 +31,10 @@ const all = ((await Bun.file(arg("locations", "locations.json")).json()) as { lo
 const ids = process.argv.includes("--ids") ? new Set(arg("ids").split(",").map(Number)) : null;
 const sample = ids
   ? all.filter((l) => ids.has(l.id))
+  : process.argv.includes("--all")
+  ? all
   : shuffle([...all], random(Number(arg("seed", "1")))).slice(0, Number(arg("sample", "30"))).sort((a, b) => a.id - b.id);
-mkdirSync(OUT, { recursive: true });
+mkdirSync(path.join(OUT, "webp"), { recursive: true });
 
 const run = (cmd: string[], opts: { cwd?: string; env?: Record<string, string>; stdin?: Uint8Array } = {}) => {
   const p = Bun.spawnSync(cmd, { cwd: opts.cwd, env: { ...process.env, ...opts.env }, stdin: opts.stdin, stdout: "pipe", stderr: "pipe" });
@@ -47,7 +50,8 @@ const read = (file: string, w: number, h: number): Pixels => ({
 const report: Record<string, unknown>[] = [];
 for (const l of sample) {
   const raw = path.join(OUT, `${l.id}.raw.png`), file = path.join(OUT, `${l.id}.png`);
-  rmSync(raw, { force: true });
+  // (nothing of an earlier run under this id survives a failed render)
+  for (const f of [raw, file, path.join(OUT, "webp", `${l.id}.webp`)]) rmSync(f, { force: true });
   const t0 = performance.now();
   // the renderer waits for every file a frame needs: one the local client
   // never loads would hold it for ever, so it gets 30 seconds (a frame takes 1 or 2), its log kept
@@ -65,16 +69,28 @@ for (const l of sample) {
     continue;
   }
   const seconds = (performance.now() - t0) / 1000;
-  const balanced = grayWorld(read(raw, W, H));
-  run(["magick", "-size", `${W}x${H}`, "-depth", "8", "rgb:-", file], { stdin: balanced.rgb });
+  // (the colours as the renderer makes them: its light is fixed at the
+  // source, docs/render-spike.md, no balance after)
+  renameSync(raw, file);
+  run(["magick", file, "-resize", "1024x", "-quality", "80", path.join(OUT, "webp", `${l.id}.webp`)]);
   const verdict = check(read(file, 160, 90));
   report.push({ id: l.id, zone: l.zone, kind: l.kind, seconds: Math.round(seconds * 10) / 10, ...verdict });
   console.log(`${l.id}: ${verdict.ok ? "ok" : verdict.why.join(", ")} (${seconds.toFixed(1)} s)`);
+  // (kept as it goes: a long run cut short still says what it made)
+  writeFileSync(path.join(OUT, "report.json"), `${JSON.stringify(report, null, 1)}\n`);
 }
 writeFileSync(path.join(OUT, "report.json"), `${JSON.stringify(report, null, 1)}\n`);
 
-// the contact sheet: each picture labelled with its id, zone and verdict
-const labels = report.filter((r) => r.mean !== undefined).flatMap((r) => ["-label", `#${r.id} zone ${r.zone} ${r.ok ? "ok" : (r.why as string[]).join("+")}`, path.join(OUT, `${r.id}.png`)]);
-if (labels.length) run(["montage", ...labels, "-tile", "5x", "-geometry", "384x216+4+4", "-font", "/System/Library/Fonts/Supplemental/Arial.ttf", "-pointsize", "14", path.join(OUT, "sheet.jpg")]);
+// the contact sheets, 30 a sheet: each picture labelled with its id, zone and verdict
+const shown = report.filter((r) => r.mean !== undefined);
+const sheets: string[] = [];
+// (an earlier, longer run's sheets go first)
+for (const f of readdirSync(OUT)) if (/^sheet.*\.jpg$/.test(f)) rmSync(path.join(OUT, f));
+for (let i = 0; i < shown.length; i += PER_SHEET) {
+  const sheet = path.join(OUT, `sheet-${String(i / PER_SHEET + 1).padStart(2, "0")}.jpg`);
+  const labels = shown.slice(i, i + PER_SHEET).flatMap((r) => ["-label", `#${r.id} zone ${r.zone} ${r.ok ? "ok" : (r.why as string[]).join("+")}`, path.join(OUT, `${r.id}.png`)]);
+  run(["montage", ...labels, "-tile", "5x", "-geometry", "384x216+4+4", "-font", "/System/Library/Fonts/Supplemental/Arial.ttf", "-pointsize", "14", sheet]);
+  sheets.push(sheet);
+}
 const bad = report.filter((r) => !r.ok).length;
-console.log(`${report.length} tried, ${bad} flagged (${((100 * bad) / report.length).toFixed(0)}%) -> ${path.join(OUT, "sheet.jpg")}`);
+console.log(`${report.length} tried, ${bad} flagged (${((100 * bad) / report.length).toFixed(0)}%) -> ${sheets.length} sheets in ${OUT}`);

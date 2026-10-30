@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test";
 import { apart, CHUNK, type ChunkRow, type DoodadRow, Doodads, Ground, ORIGIN, solid, UNIT, type WmoRow, Wmos } from "../src/ground";
 import { aim, type Candidate, order, quotas, random, spread, stand } from "../src/pick";
-import { check, grayWorld } from "../src/imagecheck";
+import { check } from "../src/imagecheck";
 
 // a chunk at (row, col): flat at z, or its heights from a function of the vertex
 function chunk(row: number, col: number, z: number | ((r: number, k: number) => number), more: Partial<ChunkRow> = {}): ChunkRow {
@@ -215,9 +215,5 @@ describe("the image check", () => {
   });
   test("a night or a cave is dark", () => {
     expect(check(image((x, y) => [(x + y) % 30, (x * 2) % 25, y % 20])).why).toContain("dark");
-  });
-  test("gray world brings an orange cast back to gray", () => {
-    const orange = grayWorld(image(() => [200, 140, 80]));
-    expect([...orange.rgb.slice(0, 3)]).toEqual([140, 140, 140]);
   });
 });
