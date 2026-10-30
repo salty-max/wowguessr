@@ -77,6 +77,28 @@ describe("where a camera looks", () => {
       expect(Math.cos(a.yaw)).toBeLessThan(0.5);
     }
   });
+  test("a hill that would fill the frame blocks its heading (flat for 20 yards, then seen more than 12 degrees up)", () => {
+    // walls 8 yards off all round but a 90 degree gap to the north (+x),
+    // where the ground is flat for 20 yards (no cliff rule), then climbs 0.6 a
+    // yard: 45 yards out it stands 12.5 yards over the eye, 15 degrees up
+    const gap = (open: boolean) => new Ground(field((r, c) => chunk(r, c, (vr, vk) => {
+      const dx = (500.5 - r) * CHUNK - vr * UNIT, dy = (500.5 - c) * CHUNK - vk * UNIT;
+      if (Math.hypot(dx, dy) > 8 && Math.abs(Math.atan2(dy, dx)) > Math.PI / 4) return 200;
+      return 50 + (open ? 0 : Math.max(0, dx - 20) * 0.6);
+    })));
+    // with the north flat, the gap is the one way it looks; with the hill, none
+    const flat = aim(mx, my, 52.5, gap(true), new Wmos([]), random(1))!;
+    expect(Math.cos(flat.yaw)).toBeGreaterThan(Math.cos(Math.PI / 4));
+    expect(aim(mx, my, 52.5, gap(false), new Wmos([]), random(1))).toBeNull();
+  });
+  test("a mound over the eye 10 yards ahead blocks its heading (under the cliff rule: 14 degrees up)", () => {
+    const mound = new Ground(field((r, c) => chunk(r, c, (vr, vk) => {
+      const dx = (500.5 - r) * CHUNK - vr * UNIT, dy = (500.5 - c) * CHUNK - vk * UNIT;
+      if (Math.hypot(dx, dy) > 8 && Math.abs(Math.atan2(dy, dx)) > Math.PI / 4) return 200;
+      return dx >= 8 && dx <= 13 ? 55 : 50;
+    })));
+    expect(aim(mx, my, 52.5, mound, new Wmos([]), random(1))).toBeNull();
+  });
   test("boxed in on every side (a pit): none", () => {
     const pit = new Ground(field((r, c) => (r === 500 && c === 500 ? chunk(r, c, (vr, vk) => 50 + 30 * Math.max(Math.abs(vr - 4), Math.abs(vk - 4))) : chunk(r, c, 200))));
     expect(aim(mx, my, 52.5, pit, new Wmos([]), random(1))).toBeNull();

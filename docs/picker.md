@@ -43,7 +43,11 @@ another parser is refused. It runs in about a second.
    ground (a rectangle, the model's +x along the game's facing yaw + 180,
    checked by a render), any part of it within 30 degrees of the heading,
    looking wider than 20 degrees (from its corners) or within 3 yards.
-   Grass and flowers have no collision box and never block. The rest scored by
+   Grass and flowers have no collision box and never block. Or a slope
+   filling the middle of the frame: on the heading or 15 degrees either
+   side, ground above the eye within 12 yards, or seen more than 12 degrees
+   up at 15 to 45 yards (the user asked 20 to 45: from 15, so a bump at 13
+   to 19 yards isn't the one distance nothing looks at). The rest scored by
    how much of 30 to 160 yards ahead lies under the eye line, less for the
    map's edge or a mountain's wall, more for a building 25 to 200 yards
    ahead. One drawn by score. Pitch: 0.4 of the slope to the ground 40
@@ -67,11 +71,11 @@ ref the candidate it came from.
 
 ## The run (seed 1)
 
-500 cameras in 44 zones (Ironforge and Undercity are interiors: none). 1186
-candidates tried, 686 refused (57.8%): 205 indoors (a subzone's middle
-inside a city's or a cave's box among them), 130 underground, 112 at a
-doodad, 112 in water, 88 boxed in (every heading blocked, mostly by trees),
-22 steep, 17 over a hole.
+500 cameras in 44 zones (Ironforge and Undercity are interiors: none). 1373
+candidates tried, 873 refused (63.6%): 237 indoors (a subzone's middle
+inside a city's or a cave's box among them), 161 underground, 157 boxed in
+(every heading blocked: trees, slopes), 139 at a doodad, 134 in water, 26
+steep, 19 over a hole.
 
 ## Rendering a sample
 
@@ -105,7 +109,7 @@ Looked at on the contact sheet, not only tested.
   Sorrows, the Burning Steppes): gray world turns it into a green-orange
   band there. The fix belongs in the renderer's light colours.
 
-- **Third pass** (the doodads' clearance, the current locations.json): no
+- **Third pass** (the doodads' clearance): no
   trunk or doodad fills a frame any more (4 did in the second). 2 never
   rendered (files the client hasn't downloaded), and by eye 10 more are
   ground, a hill or a cliff close up (rising 10 to 20 yards ahead, under
@@ -115,6 +119,16 @@ Looked at on the contact sheet, not only tested.
   its foot read 30%, but those circles made walls and cliff pieces discs
   hundreds of yards wide: 30 pictures swing by a few either way.)
 
-What would lift it next: a stricter ground rule in `aim` (ground above the
-eye within 12 yards, or rising more than 12 degrees at 20 to 45 yards, in
-the middle of the frame), and a detail test (edge energy) for bare ground.
+- **Fourth pass** (the close-slope rule, the current locations.json): the
+  close slopes are gone (the Searing Gorge shots are canyon views now, not
+  cliff faces). 1 never rendered, and by eye 7 more are poor: a big doodad
+  or WMO piece in the face that no box catches (Silithus' bones, a banner
+  pole, a Darnassus structure), a rock wall, a dull ravine, a dark slope.
+  About 22 of 30 read as a place: **8 of 30 unusable (27%)**. Starting the
+  far slope check at 15 yards rather than 20 changed none of the 500.
+
+What would lift it next: the timeouts are the client's (files it hasn't
+downloaded: a launcher repair or a full install would end them, or the
+renderer could skip a file it can't read), a detail test (edge energy) for
+the dull and dark shots the image check passes, and a last eye pass on the
+batch's contact sheets for the rest.

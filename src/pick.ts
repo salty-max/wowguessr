@@ -73,6 +73,9 @@ export function stand(c: Candidate, ground: Ground, wmos: Wmos, doodads = NO_DOO
 // yards, a building's box in the first 12, the map's edge in the first 20, or
 // a solid doodad near the middle of the frame (any part of it within 30
 // degrees of the heading, looking wider than 20 degrees or within 3 yards),
+// or a slope filling the middle of the frame (on the heading or 15 degrees
+// either side: ground above the eye within 12 yards, or more than 12
+// degrees up at 15 to 45),
 // the rest scored by how far it sees (ground under the eye line) and by a
 // building 25 to 200 yards ahead (a place a player knows). One is drawn by
 // score, its pitch slight: 0.4 of the slope to the ground 40 yards ahead, 2
@@ -109,6 +112,16 @@ export function aim(x: number, y: number, eye: number, ground: Ground, wmos: Wmo
     }))
       continue;
     if (blocked) continue;
+    // a slope filling the middle of the frame (the heading and 15 degrees
+    // either side): ground above the eye within 12 yards, or seen more than
+    // 12 degrees up at 15 to 45 yards (from 15, not 20: nothing else would
+    // look at 13 to 19, where a bump fills more of the frame than at 20)
+    if ([-15, 0, 15].some((side) => {
+      const ex = Math.cos(yaw + side * DEG), ey = Math.sin(yaw + side * DEG);
+      const at = (d: number) => ground.height(x + ex * d, y + ey * d);
+      return [3, 6, 9, 12].some((d) => (at(d) ?? -Infinity) > eye) || [15, 20, 25, 30, 35, 40, 45].some((d) => Math.atan2((at(d) ?? -Infinity) - eye, d) > 12 * DEG);
+    }))
+      continue;
     const far = [30, 45, 60, 90, 120, 160].map((d) => {
       const h = ground.height(x + dx * d, y + dy * d);
       return h == null ? null : Math.atan2(h - eye, d);
