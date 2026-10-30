@@ -20,7 +20,7 @@ export type ChunkRow = {
   liquid_max: number | null;
   liquid_cells: Uint8Array | null;
 };
-export type WmoRow = { unique_id: number; min_x: number; min_y: number; min_z: number; max_x: number; max_y: number; max_z: number };
+export type WmoRow = { unique_id: number; file_id: number; min_x: number; min_y: number; min_z: number; max_x: number; max_y: number; max_z: number };
 
 // a bit of an 8x8 mask kept as 8 bytes, little end first
 const bit = (m: Uint8Array | null, i: number) => !!m && !!(m[i >> 3] & (1 << (i & 7)));

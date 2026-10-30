@@ -1,10 +1,13 @@
 # The location picker (landmark-first, 30 October 2026)
 
-`bun scripts/pick.ts [--count 300] [--leaf 0.6] [--out locations.json]`
+`bun scripts/pick.ts [--count 300] [--leaf 0.6] [--out locations.json] [--drops drops.json] [--fresh]`
 picks cameras on Eastern Kingdoms (map 0) and Kalimdor (map 1), each looking
 at a landmark, from wow-data's `classic.db` and `classic-terrain.db` only
 (reached through the family folder, `src/family.ts`), and writes
-`locations.json`. The same databases give the same file. A terrain database
+`locations.json`, leaving out the landmarks `drops.json` names (below). The
+same databases and drops give the same file, and a landmark kept from the
+last run keeps its id (its renders stay its own while its camera doesn't
+move). A terrain database
 read at another pin or by another parser is refused. It runs in about 9
 seconds.
 
@@ -80,29 +83,78 @@ degrees each way: the horizon stays in the picture, a place, not a map):
 ## The spread (`choose`)
 
 Each zone's share of `--count` by the square root of its size in map chunks,
-at least 3 (as many as it has) and at most 12, its landmarks best first, 2 a
-subzone, none within 80 yards of another.
+at least 4 (as many as it has) and at most 12, its landmarks best first, one
+a name (a second Moonbrook is the same answer) and one a model (Duskwood's
+farmhouses, the Witherbark yurts: the same picture twice), none within 80
+yards of another. The best-scored of each kept, as the draft drops had it.
+
+## A zone short of landmarks (`WIDE`)
+
+A zone the strict rules leave under its share, or with no strict landmark at
+all (its share then 4), gets a second pass for it alone, one notch looser (`src/landmarks.ts`, `WIDE`), the first pass's
+names and models kept out:
+
+- a WMO 5 yards across and 4 tall counts (a hut, a shrine), not 8 and 6;
+- a WMO on the zone's own unnamed ground counts, named by the zone ("Searing
+  Gorge");
+- a camera may stand on the terrain inside a big WMO's box (`stand`'s
+  `inBig`). The strict rule refuses it (the floor may be a city's), and so
+  every spot around Stonard was refused, inside the Pool of Tears' 540-yard
+  box of lake and cliff. The render shows whether it was a floor after all;
+- a doodad in the middle of the frame refuses a heading within 20 yards,
+  not 60. The Swamp of Sorrows' great trees have collision boxes 30 yards
+  across (their roots), and every heading had one. The cast still says what
+  they hide.
+
+These locations carry `widened: true`. Not tried: named game objects (Un'Goro's
+crystal pylons, camps' tents) and flight masters are server spawns, not in
+the map files the renderer draws. Big doodads as landmarks would need the
+models' names to tell a crystal or a tent from a tree, and wow-data has none
+(the listfile isn't in its databases).
+
+## drops.json
+
+The landmarks whose pictures were looked at and dropped, by placement (`{
+map, wmo, name, why, by }`, `by` draft or user), kept out of every later
+run, their zone filled from the next best. Near-duplicates are not listed:
+`choose` keeps one of each. `empty` names a zone left with no picture on
+purpose, with why. `test/locations.test.ts` refuses a `locations.json` that
+still holds a dropped landmark (the picker not run after the drop list) or
+a zone at 0 that `empty` doesn't name: a drop list can't take a zone off the
+map unnoticed.
 
 ## locations.json
 
-`{ about, wowData, terrainBuild, terrainParser, landmarks, unseen, perZone,
-locations: [...] }`, each location `{ id, map, x, y, z, yaw, pitch, lookAt:
-[x, y, z], ground, zone, subzone, name, kind, wmo, fill, sky, score }`.
+`{ about, wowData, terrainBuild, terrainParser, landmarks, unseen, dropped,
+perZone, share, nextId, locations: [...] }`, each location `{ id, map, x, y, z, yaw, pitch, lookAt:
+[x, y, z], ground, zone, subzone, name, kind, wmo, widened?, fill, sky, score }`.
 World yards (the renderer's `-camera` and `-lookat` take them as they are),
 the eye at x, y, z, the landmark's lower middle at lookAt, yaw the game's
 facing in radians (0 north, +x, a quarter turn west, +y) and pitch radians
 up toward it, zone and subzone AreaTable ids, name the subzone's (the game
 can show it after the guess), kind `building`, wmo the landmark's placement
-id, fill and sky the cast's shares, score the viewpoint's (fit + sky -
-hidden).
+id, widened (only when true: found by `WIDE`), fill and sky the cast's
+shares, score the viewpoint's (fit + sky - hidden). Beside them `share`
+(what each zone was due), `dropped` (the entries drops.json lists) and
+`nextId` (the id the next new camera takes, after every id the last run and
+the drops' notes used). Without the last `locations.json` the picker refuses
+to run (the ids would start again and miss the renders), unless `--fresh`.
 
-## The run (30 October 2026)
+## The run (30 October 2026, after the refill)
 
-552 landmarks tried, 252 with no good viewpoint (hidden by trees or
-hills, no clear ground to stand on, or seen only from above), 227 cameras
-chosen in 39 zones. Under 3: Deadwind Pass (1), Searing Gorge (1), Felwood (1), Badlands (2), Dustwallow Marsh (2), Darkshore (2), Un'Goro Crater (2). None in the
-4 cities, Ironforge and Undercity (interiors), Teldrassil and Hyjal. (Before
-the water rule and the look-down cap: 571 tried, 239 chosen in 39 zones.)
+685 landmarks tried (each once, though the looser pass tries again those the
+strict one saw from nowhere), 262 with no good viewpoint (hidden by trees or
+hills, no clear ground to stand on, or seen only from above), 51 entries in
+`drops.json`, **205 cameras in 41 zones**, 35 of them widened (Teldrassil and
+Thunder Bluff come in through it, with no strict landmark of their own).
+Every zone but Un'Goro Crater keeps a picture (`drops.json` says why it has
+none). Still under their share (`share` in locations.json): Swamp of Sorrows
+1 of 8, Badlands 1 of 4, Thunder Bluff 1 of 4, Darkshore 2 of 12, Wetlands
+3 of 12, Tanaris 6 of 12, Felwood 2 of 5, and others by one to six. These
+zones have few WMOs standing in the open, and one picture a name and a model
+leaves fewer than their size asks for. None in Stormwind, Orgrimmar,
+Darnassus, Ironforge, Undercity or Hyjal. (Before the refill: 552 tried, 227
+chosen. Before the water rule and the look-down cap: 571 tried, 239.)
 
 ## The first sample (30 of the 239, before the discovery rule, by eye)
 
@@ -206,3 +258,43 @@ ground, the Badlands' and the Searing Gorge's red rock, the Eastern
 Plaguelands' rust, Silithus' orange sky, Winterspring's violet. These are
 the zones' own lights and textures, probably the game's look, not verified
 against it.
+
+## The refill (30 October 2026)
+
+The batch's draft drops (17 empty, 58 near-duplicates, 10 timeouts) left the
+Swamp of Sorrows and Un'Goro Crater with no picture and 5 zones with one. The
+picker now keeps one picture a name and a model itself (`choose`), leaves
+out what `drops.json` names before a subzone's two biggest are taken (so the
+next one gets its turn), fills each zone from the next best, then `WIDE` for
+the zones still short, or with no strict landmark at all. Each round's new
+cameras were rendered and looked at on their contact sheet, the bad ones
+added to `drops.json`, and the picker run again:
+
+- **Round 1**: 58 new. 9 draft drops (a snow mound, bare rocks, a cart in
+  the grass, Stonard behind its trees, Dreadmaul Rock a black outline, a
+  wall in the face at the Caverns of Time), 3 timeouts. The image test
+  caught none of the 9: textured frames pass it.
+- **Round 2**: 4 new, 3 kept (Pool of Tears' sunken ruins, a Wetlands camp,
+  a Loch Modan mine), 1 timeout.
+- **Round 3** (after the review: drops left out before the subzone cap, WIDE
+  for zones with no strict landmark): 15 new. Teldrassil (Starbreeze
+  Village, Shadowglen) and Thunder Bluff (totems on a bluff) appear, and
+  the Writhing Haunt, Morgan's Vigil, the Dead Field, Hillsbrad Fields, a
+  second Frostmane Hold. 2 draft drops (Stonard again, a Wetlands field), 4
+  timeouts.
+- **Rounds 4 and 5**: 6, then 4 new, all but one in Hillsbrad and Arathi,
+  all timeouts but a Wetlands camp. The installed client lacks those areas'
+  files (Southshore, Thoradin's Wall, Northfold Manor, Durnholde Keep), and
+  each round there only spends another candidate. So the last 4 (316 to
+  319) stay in `locations.json` unrendered and the rounds stop there.
+
+A timeout's entry in `drops.json` says `by: "render"`: it is the client's,
+not a judgment of the picture, and goes once a launcher repair or a full
+install brings the files. The duplicates rule keeps the best-scored of each,
+as the draft did, but 3 came back where the draft's twin was dropped instead
+(Zul'Mamwe's other ruin, Render's Valley, Darrowshire).
+
+For the user's pass: `.cache/review2/review.html` (the `geoguessr-refill`
+launch entry), only what changed since the first page: the 61 new (4 with
+no render), the 11 draft drops in red, the 3 back in blue, the one swapped
+out, and each zone's counts (the batch, after the draft, now, its share).

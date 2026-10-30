@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test";
 import { apart, CHUNK, type ChunkRow, type DoodadRow, Doodads, Ground, ORIGIN, solid, UNIT, type WmoRow, Wmos } from "../src/ground";
 import { boxShare, project, rayBox, rayGround, raySolid, shoot } from "../src/frame";
-import { choose, clear, landmarks, viewpoint, type World } from "../src/landmarks";
+import { choose, clear, landmarks, viewpoint, WIDE, type World } from "../src/landmarks";
 import { type Candidate, quotas, random, shuffle, stand } from "../src/pick";
 import { check } from "../src/imagecheck";
 
@@ -27,7 +27,7 @@ const field = (center: (r: number, c: number) => ChunkRow | null = () => null) =
 const mx = ORIGIN - 500.5 * CHUNK, my = ORIGIN - 500.5 * CHUNK;
 const at = (more: Partial<Candidate> = {}): Candidate => ({ x: mx, y: my, z: 50, ...more });
 const box = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number): WmoRow =>
-  ({ unique_id: 1, min_x: x0, min_y: y0, min_z: z0, max_x: x1, max_y: y1, max_z: z1 });
+  ({ unique_id: 1, file_id: 1, min_x: x0, min_y: y0, min_z: z0, max_x: x1, max_y: y1, max_z: z1 });
 
 describe("the ground", () => {
   test("the height between a chunk's vertices, bilinear", () => {
@@ -60,6 +60,13 @@ describe("where a camera stands", () => {
   test("on a city's floor (a big box): the spawn's own height", () => {
     const city = new Wmos([box(mx - 600, my - 600, 0, mx + 600, my + 600, 200)]);
     expect(stand(at({ z: 58 }), flat, city)).toEqual({ base: 58 });
+  });
+  test("no height of its own inside a big box: refused, unless inBig (the terrain then)", () => {
+    const lake = new Wmos([box(mx - 300, my - 300, 0, mx + 300, my + 300, 90)]);
+    expect(stand(at({ z: null }), flat, lake)).toEqual({ reason: "indoors" });
+    expect(stand(at({ z: null }), flat, lake, undefined, true)).toEqual({ base: 50 });
+    // a building's box still is indoors
+    expect(stand(at({ z: null }), flat, new Wmos([box(mx - 10, my - 10, 45, mx + 10, my + 10, 70)]), undefined, true)).toEqual({ reason: "indoors" });
   });
   test("in water over the ankles, or on a cliff: refused", () => {
     const wet = new Uint8Array(8).fill(0xff);
@@ -215,13 +222,24 @@ describe("the landmarks", () => {
     // the landmark's own box never blocks
     expect(clear(mx, my, 53, 0, w([], [{ ...target, min_x: mx + 5 }]), { ...target, min_x: mx + 5 })).toBe(true);
   });
-  test("chosen: the best of a zone first, its share, 2 a subzone, 80 yards apart", () => {
-    const f = (zone: number, area: number, x: number, score: number, id: number) =>
-      ({ zone, landmark: { area, at: [x, 0, 0], box: { unique_id: id } }, view: { score } }) as unknown as Parameters<typeof choose>[0][number];
-    const found = [f(1, 10, 0, 0.5, 1), f(1, 10, 100, 0.9, 2), f(1, 10, 200, 0.7, 3), f(1, 11, 30, 0.8, 4), f(2, 20, 0, 0.1, 5)];
-    const got = choose(found, new Map([[1, 3], [2, 1]]));
-    // zone 1: 2 (best), not 4 (70 yards from 2), 3, not 1 (its subzone's third); zone 2: 5
-    expect(got.map((g) => g.landmark.box.unique_id)).toEqual([2, 3, 5]);
+  test("chosen: the best of a zone first, its share, one a name, one a model, 80 yards apart", () => {
+    const f = (zone: number, area: number, x: number, score: number, id: number, model = id) =>
+      ({ zone, landmark: { area, at: [x, 0, 0], box: { unique_id: id, file_id: model } }, view: { score } }) as unknown as Parameters<typeof choose>[0][number];
+    const found = [f(1, 10, 0, 0.5, 1), f(1, 10, 100, 0.9, 2), f(1, 11, 30, 0.8, 4), f(1, 12, 300, 0.7, 6, 2), f(1, 13, 500, 0.6, 7), f(2, 20, 0, 0.1, 5)];
+    const ids = (list: ReturnType<typeof choose>) => list.map((g) => g.landmark.box.unique_id);
+    // zone 1: 2 (best), not 4 (70 yards from 2), not 6 (2's model), 7, not 1 (2's name); zone 2: 5
+    expect(ids(choose(found, new Map([[1, 3], [2, 1]])))).toEqual([2, 7, 5]);
+    // two areas of one name are one place
+    expect(ids(choose(found, new Map([[1, 3]]), (a) => (a === 13 ? "10" : String(a))))).toEqual([2]);
+    // kept before: counted in the share, its name and model kept out
+    expect(ids(choose(found, new Map([[1, 2]]), String, [found[4]]))).toEqual([2]);
+  });
+  test("one notch looser for a zone short of landmarks: a hut, a tower on the zone's own ground", () => {
+    const g = new Ground(named(field()));
+    const hut = { ...box(mx - 3, my - 3, 49, mx + 3, my + 3, 55), unique_id: 5 };
+    expect(landmarks(0, g, [hut], zone99)).toEqual([]);
+    expect(landmarks(0, g, [hut], zone99, () => true, WIDE).length).toBe(1);
+    expect(landmarks(0, flat(), [house(mx, my)], zoneOf, () => true, WIDE).map((l) => l.area)).toEqual([12]);
   });
 });
 

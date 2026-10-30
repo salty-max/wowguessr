@@ -1,0 +1,368 @@
+{
+ "about": "Landmarks left out of locations.json after their pictures were looked at, by placement (map, wmo: wmo_placement unique_id), so a new run of scripts/pick.ts keeps them out and fills their zone from the next best. by: draft (proposed from the contact sheets, waiting on the user eye pass), user, or render (it never rendered: the installed client lacks the area files, so the entry goes once the client has them). Near-duplicates (the same model or the same name twice in a zone) are not listed: the picker keeps one of each (src/landmarks.ts choose). empty: a zone left with no picture on purpose, with why (test/locations.test.ts refuses any other).",
+ "drops": [
+  {
+   "map": 0,
+   "wmo": 100930,
+   "name": "Steelgrill's Depot",
+   "why": "nothing to guess from (#1, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 351590,
+   "name": "Frostmane Hold",
+   "why": "nothing to guess from (#7, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 53608,
+   "name": "Dreadmaul Post",
+   "why": "nothing to guess from (#13, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 42406,
+   "name": "Misty Reed Strand",
+   "why": "nothing to guess from (#14, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 34104,
+   "name": "Misty Reed Strand",
+   "why": "nothing to guess from (#15, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 560834,
+   "name": "Itharius's Cave",
+   "why": "nothing to guess from (#16, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 39925,
+   "name": "Darkshire",
+   "why": "nothing to guess from (#17, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 83294,
+   "name": "Mo'grosh Stronghold",
+   "why": "nothing to guess from (#83, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 56718,
+   "name": "Slither Rock",
+   "why": "nothing to guess from (#110, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 438047,
+   "name": "Morgan's Vigil",
+   "why": "nothing to guess from (#111, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 132088,
+   "name": "Valgan's Field",
+   "why": "nothing to guess from (#135, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 206793,
+   "name": "Northpass Tower",
+   "why": "nothing to guess from (#142, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 205034,
+   "name": "Crown Guard Tower",
+   "why": "nothing to guess from (#146, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": 24647056,
+   "name": "Dunemaul Compound",
+   "why": "nothing to guess from (#198, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": 317115,
+   "name": "Fire Plume Ridge",
+   "why": "nothing to guess from (#208, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": 454613,
+   "name": "Fire Plume Ridge",
+   "why": "nothing to guess from (#209, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": 607503,
+   "name": "Hive'Regal",
+   "why": "nothing to guess from (#223, batch of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 129367,
+   "name": "The Writhing Haunt",
+   "why": "never rendered: the installed client lacks its files (#65)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 179489,
+   "name": "Thoradin's Wall",
+   "why": "never rendered: the installed client lacks its files (#102)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 188687,
+   "name": "Northfold Manor",
+   "why": "never rendered: the installed client lacks its files (#105)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 184800,
+   "name": "Bogen's Ledge",
+   "why": "never rendered: the installed client lacks its files (#114)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 397992,
+   "name": "Quel'Danil Lodge",
+   "why": "never rendered: the installed client lacks its files (#118)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 179488,
+   "name": "Thoradin's Wall",
+   "why": "never rendered: the installed client lacks its files (#159)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 176001,
+   "name": "Nethander Stead",
+   "why": "never rendered: the installed client lacks its files (#160)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 180882,
+   "name": "Southshore",
+   "why": "never rendered: the installed client lacks its files (#161)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 173707,
+   "name": "Hillsbrad Fields",
+   "why": "never rendered: the installed client lacks its files (#162)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 178119,
+   "name": "Thoradin's Wall",
+   "why": "never rendered: the installed client lacks its files (#163)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 51586,
+   "name": "Chill Breeze Valley",
+   "why": "nothing to guess from (#229, refill of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 351431,
+   "name": "Badlands",
+   "why": "nothing to guess from (#230, refill of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 90357,
+   "name": "Wetlands",
+   "why": "nothing to guess from (#234, refill of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 53026,
+   "name": "Grizzlepaw Ridge",
+   "why": "nothing to guess from (#244, refill of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": 309918,
+   "name": "Tanaris",
+   "why": "nothing to guess from (#267, refill of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 560453,
+   "name": "Itharius's Cave",
+   "why": "nothing to guess from (#270, refill of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 76428,
+   "name": "Stonard",
+   "why": "nothing to guess from (#271, refill of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 10008,
+   "name": "Dreadmaul Rock",
+   "why": "nothing to guess from (#278, refill of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": 426734,
+   "name": "Caverns of Time",
+   "why": "nothing to guess from (#290, refill of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 178115,
+   "name": "Thoradin's Wall",
+   "why": "never rendered: the installed client lacks its files (#247)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 205738,
+   "name": "Dabyrie's Farmstead",
+   "why": "never rendered: the installed client lacks its files (#248)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 461908,
+   "name": "Durnholde Keep",
+   "why": "never rendered: the installed client lacks its files (#282)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 461820,
+   "name": "Durnholde Keep",
+   "why": "never rendered: the installed client lacks its files (#294)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 76430,
+   "name": "Stonard",
+   "why": "nothing to guess from (#296, refill of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 90362,
+   "name": "Wetlands",
+   "why": "nothing to guess from (#297, refill of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 189258,
+   "name": "Northfold Manor",
+   "why": "never rendered: the installed client lacks its files (#300)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 178118,
+   "name": "Thoradin's Wall",
+   "why": "never rendered: the installed client lacks its files (#301)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 173749,
+   "name": "Southshore",
+   "why": "never rendered: the installed client lacks its files (#306)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 178114,
+   "name": "Thoradin's Wall",
+   "why": "never rendered: the installed client lacks its files (#307)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 189257,
+   "name": "Northfold Manor",
+   "why": "never rendered: the installed client lacks its files (#311)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 178120,
+   "name": "Thoradin's Wall",
+   "why": "never rendered: the installed client lacks its files (#312)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 205739,
+   "name": "Dabyrie's Farmstead",
+   "why": "never rendered: the installed client lacks its files (#313)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 173756,
+   "name": "Southshore",
+   "why": "never rendered: the installed client lacks its files (#314)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": 462243,
+   "name": "Thoradin's Wall",
+   "why": "never rendered: the installed client lacks its files (#315)",
+   "by": "render"
+  }
+ ],
+ "empty": [
+  {
+   "zone": "Un'Goro Crater",
+   "why": "its two landmarks, both at Fire Plume Ridge, render as nothing to guess from, and it has no other WMO standing on open ground (Marshal's Refuge is a cave, its box under the hill). Its places are terrain and doodads (crystals, the tar pits), and wow-data has no model names to tell a crystal from a tree. The crystal pylons are game objects, which the renderer does not draw."
+  }
+ ]
+}

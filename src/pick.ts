@@ -33,16 +33,19 @@ export function random(seed: number): () => number {
 // first picker's) that height where it stands on a city's floor (a big WMO
 // over the terrain). Under the terrain is a cave or a cellar, inside a
 // building's box is indoors, and a point with no height of its own inside any
-// box is refused (its floor unknown).
+// box is refused (its floor unknown), unless inBig: then it stands on the
+// terrain inside a big box (a canyon, a lake, a cave system around a town:
+// the Pool of Tears' around Stonard), the render to show it wasn't a city's
+// floor.
 const NO_DOODADS = new Doodads([]);
-export function stand(c: Candidate, ground: Ground, wmos: Wmos, doodads = NO_DOODADS): { base: number } | { reason: Reason } {
+export function stand(c: Candidate, ground: Ground, wmos: Wmos, doodads = NO_DOODADS, inBig = false): { base: number } | { reason: Reason } {
   const g = ground.height(c.x, c.y);
   if (g == null) return { reason: "off-map" };
   if (ground.hole(c.x, c.y)) return { reason: "hole" };
   let base = g;
   // no height of its own (a subzone's middle) inside a city's or a cave's box:
   // the floor may be the WMO's, over or under the terrain, and nothing says which
-  if (c.z == null && wmos.at(c.x, c.y, g + 1).length) return { reason: "indoors" };
+  if (c.z == null && !inBig && wmos.at(c.x, c.y, g + 1).length) return { reason: "indoors" };
   if (c.z != null) {
     if (c.z < g - ON_GROUND) return { reason: "underground" };
     if (c.z > g + ON_GROUND) {
