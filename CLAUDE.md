@@ -10,7 +10,8 @@ WoW addons folder but not an addon.
 ## Commands
 
 - `bun run check`: the check (tsc, bun test). Run it through q: `bun harness/q.ts check -- bun run check`.
-- `bun scripts/pick.ts`: `locations.json` from wow-data's classic.db and classic-terrain.db
+- `bun scripts/pick.ts`: `locations.json`, a camera on each chosen landmark (a WMO in a
+  named place), from wow-data's classic.db and classic-terrain.db
   (`bun wow-data/bin/terrain.ts classic` first; `docs/picker.md`).
 - `bun scripts/render.ts --renderer <binary> --workdir <dir> --casc <dir>`: a sample rendered,
   checked and laid on contact sheets in `.cache/renders/` (`--all`: every one).
@@ -20,8 +21,8 @@ WoW addons folder but not an addon.
 
 - `docs/render-spike.md`: the render proof (offlineRenderer on macOS, the
   patches, timings, what is open).
-- `docs/picker.md`: the location picker (what it reads, how a camera is
-  chosen, locations.json, the reject rates).
+- `docs/picker.md`: the landmark picker (what a landmark is, how its camera is
+  chosen, locations.json, the samples looked at, the first picker's history).
 
 ## Hard rules
 

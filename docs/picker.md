@@ -1,96 +1,132 @@
-# The location picker (step 3, 30 October 2026)
+# The location picker (landmark-first, 30 October 2026)
 
-`bun scripts/pick.ts [--count 500] [--seed 1] [--out locations.json]` picks
-cameras on Eastern Kingdoms (map 0) and Kalimdor (map 1) from wow-data's
-`classic.db` and `classic-terrain.db` only (reached through the family
-folder, `src/family.ts`), and writes `locations.json`. The same seed and
-databases give the same file. A terrain database read at another pin or by
-another parser is refused. It runs in about a second.
+`bun scripts/pick.ts [--count 300] [--leaf 0.6] [--out locations.json]`
+picks cameras on Eastern Kingdoms (map 0) and Kalimdor (map 1), each looking
+at a landmark, from wow-data's `classic.db` and `classic-terrain.db` only
+(reached through the family folder, `src/family.ts`), and writes
+`locations.json`. The same databases give the same file. A terrain database
+read at another pin or by another parser is refused. It runs in about 9
+seconds.
+
+Why landmark-first: the first picker (below, "Before landmarks") chose where
+a camera could stand and pointed it at the most open view. Its pictures were
+mostly snow fields, bare hills and grass: nothing to guess from. A player
+guesses from a place they know, so every picture is now of something the
+data names (the user's call, 30 October 2026, after comparing with
+where-in-wow's hand-picked landmarks, a design reference only: no list or
+code taken from it).
 
 ## What it reads
 
-- `terrain_chunk`, `wmo_placement`, `doodad_placement` and `doodad_model`,
-  added to wow-data for this step in
-  a database of their own (`bun wow-data/bin/terrain.ts classic`, never
-  released: `wow-data/src/terrain.ts`): the ground's height, holes, the liquid over
-  each 4-yard cell and the area the client names there, from the map files'
-  root ADTs; each WMO's bounding box from the `_obj0` ADTs; each doodad (an
-  M2: a tree, a rock, a banner) and its model's collision box. The heights
-  were checked against the Classic database's spawns (median 0.08 yards off
-  around Goldshire).
-- Candidates: the Classic database's creature and object spawns, the
-  patrols' paths (`path`, mostly roads), the flight masters
-  (`client_TaxiNodes`), and the middle of each area (its map chunk nearest
-  the mean of its chunks).
-- Zones: the top-level areas with a zone map (`client_UiMap` type 3) on the
-  two continents, 46 in all. A point's zone is its chunk's area walked up
-  `ParentAreaID`; its subzone is the chunk's own area.
+- `terrain_chunk`, `wmo_placement`, `doodad_placement` and `doodad_model`
+  from wow-data's own terrain database (`bun wow-data/bin/terrain.ts
+  classic`, never released: `wow-data/src/terrain.ts`): the ground's height,
+  holes, water and the area the client names on each 4-yard cell, each WMO's
+  bounding box, each doodad (an M2: a tree, a rock, a banner) with its
+  model's collision box and whole box.
+- `client_AreaTable` (names, parents), `client_UiMap` and
+  `client_UiMapAssignment` (the 46 zones with a zone map) from `classic.db`.
 
-## How a camera is chosen (`src/pick.ts`)
+## The landmarks (`src/landmarks.ts`, `landmarks`)
 
-1. **Where it stands** (`stand`): on the terrain, or on a city's floor when
-   a spawn stands above the terrain inside a big WMO (a box 160 yards or
-   more across: Stormwind's is 1300). Refused: off the map, over a hole, a
-   spawn more than 2 yards under the terrain (a cave, a cellar), inside a
-   building's box (smaller than 160 yards), within a yard of a solid
-   doodad anywhere from 1.5 to 3.5 yards up (`doodad`), water more than half a yard
-   deep at the feet, ground steeper than 1.2 (rise over run).
-2. **The eye**: 2 to 3 yards above that ground.
-3. **Where it looks** (`aim`): 16 headings, each blocked by ground at eye
-   height within 5 yards, ground rising more than 30 degrees within 20, a
-   building's box within 12, the map's edge within 20, or a solid doodad
-   near the middle of the frame: its collision box turned and scaled on the
-   ground (a rectangle, the model's +x along the game's facing yaw + 180,
-   checked by a render), any part of it within 30 degrees of the heading,
-   looking wider than 20 degrees (from its corners) or within 3 yards.
-   Grass and flowers have no collision box and never block. Or a slope
-   filling the middle of the frame: on the heading or 15 degrees either
-   side, ground above the eye within 12 yards, or seen more than 12 degrees
-   up at 15 to 45 yards (the user asked 20 to 45: from 15, so a bump at 13
-   to 19 yards isn't the one distance nothing looks at). The rest scored by
-   how much of 30 to 160 yards ahead lies under the eye line, less for the
-   map's edge or a mountain's wall, more for a building 25 to 200 yards
-   ahead. One drawn by score. Pitch: 0.4 of the slope to the ground 40
-   yards ahead, plus 2 degrees down to 3 up, within 6 down and 8 up. The
-   look-at is 30 yards along it.
-4. **The spread**: each zone's share of the count by the square root of its
-   size in map chunks (largest remainders), its candidates tried in turns of
-   kind (a subzone's middle, a road, a flight master, a spawn), no two
-   cameras of a zone within 150 yards, at most 3 a subzone. A zone that runs
-   dry gives its share to the others, closer together.
+A landmark is a WMO standing on the ground in a named place: its box rising 6
+yards over the ground at its middle (a cave's box barely clears the hill it
+is dug into), its foot no more than 6 over it (nothing in the sky; a crypt
+under a church goes deep and is fine: 15 of the chosen do, the Sepulcher,
+Agamand Mills, Deathknell), not in water (a wreck, a dock), 8 to 160 yards
+across, in a subzone (the zone alone names no place). A subzone keeps its
+biggest and a second 80 yards away. Its name is the subzone's (the inn of
+Goldshire is "Goldshire"). A camera looks at its lower middle (a tall
+tower's top is sky, its door is the place).
+
+Not landmarks: a WMO 160 yards or more across (a city, a fortress,
+Gadgetzan's walls). Its box is mostly air, so what a camera sees of it can't
+be told from the box (a first try showed "Tanaris" as empty sand). The
+cities (Stormwind, Orgrimmar, Thunder Bluff, Darnassus) have no landmark yet.
+
+## The viewpoint (`viewpoint`)
+
+16 bearings, 4 distances (12, 30, 55 and 80 yards beyond the box's corners,
+at least 25 from its middle), eyes 3, 6 and 10 yards over the ground (a hill
+or a bridge beats eye level):
+
+1. **It can stand there** (`stand`, `src/pick.ts`): off the map, a hole,
+   inside a building's box, within a yard of a solid doodad, water over the
+   ankles, a cliff: refused.
+2. **The heading to the landmark is clear** (`clear`): no ground at the eye
+   within 5 yards, no other building's box within 12, no solid doodad near
+   the middle of the frame (any part within 30 degrees, looking wider than
+   20 degrees or within 3 yards).
+3. **It frames the landmark** (`boxShare`, `src/frame.ts`): its box (above
+   the ground) projected through the renderer's lens (53.97 degrees high,
+   16:9) covers 12 to 75% of the picture, whole.
+4. **It sees it** (`shoot`): the 12 framed nearest a third of the picture are
+   cast through on a 16x9 grid of rays against the ground, the other WMOs'
+   boxes and the doodads' whole boxes (leaves too, 0.6 of their width:
+   `--leaf`). Kept when at most a third of the landmark's box is hidden, the
+   middle of the picture isn't a wall within 8 yards, and the landmark fills
+   8% of it. Scored by fill (best near a third), sky (best 10 to 35%), less
+   for what is hidden. The best is the landmark's camera.
+
+## The spread (`choose`)
+
+Each zone's share of `--count` by the square root of its size in map chunks,
+at least 3 (as many as it has) and at most 12, its landmarks best first, 2 a
+subzone, none within 80 yards of another.
 
 ## locations.json
 
-`{ about, seed, wowData, terrainBuild, terrainParser, tried, rejects, perZone,
-locations: [...] }`, each
-location `{ id, map, x, y, z, yaw, pitch, lookAt: [x, y, z], ground, zone,
-subzone, kind, ref }`. World yards (the renderer's `-camera` and `-lookat`
-take them as they are), yaw the game's facing in radians (0 north, +x, a
-quarter turn west, +y), pitch radians up, zone and subzone AreaTable ids,
-ref the candidate it came from.
+`{ about, wowData, terrainBuild, terrainParser, landmarks, unseen, perZone,
+locations: [...] }`, each location `{ id, map, x, y, z, yaw, pitch, lookAt:
+[x, y, z], ground, zone, subzone, name, kind, wmo, fill, sky, score }`.
+World yards (the renderer's `-camera` and `-lookat` take them as they are),
+the eye at x, y, z, the landmark's lower middle at lookAt, yaw the game's
+facing in radians (0 north, +x, a quarter turn west, +y) and pitch radians
+up toward it, zone and subzone AreaTable ids, name the subzone's (the game
+can show it after the guess), kind `building`, wmo the landmark's placement
+id, fill and sky the cast's shares, score the viewpoint's (fit + sky -
+hidden).
 
-## The run (seed 1)
+## The run (30 October 2026)
 
-500 cameras in 44 zones (Ironforge and Undercity are interiors: none). 1373
-candidates tried, 873 refused (63.6%): 237 indoors (a subzone's middle
-inside a city's or a cave's box among them), 161 underground, 157 boxed in
-(every heading blocked: trees, slopes), 139 at a doodad, 134 in water, 26
-steep, 19 over a hole.
+571 landmarks tried, 248 with no good viewpoint (hidden by trees or
+hills, or no clear ground to stand on), 239 cameras chosen in 39 zones.
+Under 3: Deadwind Pass, the Searing Gorge and Felwood (1 each), the
+Badlands, the Swamp of Sorrows and Un'Goro Crater (2). None in the 4
+cities, Ironforge and Undercity (interiors), Teldrassil and Hyjal.
 
-## Rendering a sample
+## The sample (30 of the 239, by eye)
+
+**27 of 30 recognisable as the place named** (the target was 24): the
+Crossroads, Camp Taurajo, Sentinel Hill, Light's Hope Chapel, Strahnbrad,
+Northdale, Thorium Point, Kolkar Village, the Ivar Patch, Grol'dom Farm and
+so on, each a building or a camp in its place. The 3 others: 1 never
+rendered (a file the installed client hasn't downloaded: the render times
+out), a wreck on the Longshore beach (on sand, not in water, so kept), and
+Northpass Tower small in the Plaguelands' brown haze (the image test flagged
+it). Two passes before this one, on the way: 22 of 30 (trees hiding the
+landmark, a big WMO's empty box, a dock), then 24 of 30 (wrecks and docks in
+the sea).
+
+## Rendering
 
 `bun scripts/render.ts --renderer <binary> --workdir <dir> --casc <dir>
-[--sample 30]` renders a sample with the scratch offlineRenderer
+[--sample 30 | --all | --ids 3,17]` renders with the scratch offlineRenderer
 (`docs/render-spike.md`; run from its build folder, where its `spirv/`
 shaders and `export.db3` are; its light is fixed at the source, no colour
-balance after: `docs/render-spike.md`), runs the image check
-(`src/imagecheck.ts`: a frame or its middle third of one colour, or too dark)
-and writes `.cache/renders/` (or `--out`: the pictures, a 1024-wide WebP of
-each in `webp/`, `report.json`, contact sheets of 30 `sheet-NN.jpg`).
-`--all` renders every location.
+balance after), runs the image check (`src/imagecheck.ts`: a frame or its
+middle third of one colour, or too dark) and writes `.cache/renders/` (or
+`--out`: the pictures, a 1024-wide WebP of each in `webp/`, `report.json`,
+contact sheets of 30 `sheet-NN.jpg` labelled with the landmark's name).
 Never committed.
 
-## The samples (30 cameras, seed 1, 30 October 2026)
+## Before landmarks (the first picker, 30 October 2026)
+
+Candidates were spawns, patrol paths, flight masters and subzone middles,
+each camera at eye height turned to its most open heading, then rules
+added one by one against what the contact sheets showed: doodads in the
+lens (as turned rectangles from their collision boxes), close slopes, a
+stand window. Its samples:
 
 Looked at on the contact sheet, not only tested.
 
@@ -122,7 +158,7 @@ Looked at on the contact sheet, not only tested.
   its foot read 30%, but those circles made walls and cliff pieces discs
   hundreds of yards wide: 30 pictures swing by a few either way.)
 
-- **Fourth pass** (the close-slope rule, the current locations.json): the
+- **Fourth pass** (the close-slope rule): the
   close slopes are gone (the Searing Gorge shots are canyon views now, not
   cliff faces). 1 never rendered, and by eye 7 more are poor: a big doodad
   or WMO piece in the face that no box catches (Silithus' bones, a banner

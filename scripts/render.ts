@@ -26,7 +26,7 @@ const PER_SHEET = 30;
 // the continents' WDTs (world/maps/<dir>/<dir>.wdt, wago.tools' file list)
 const WDT: Record<number, number> = { 0: 775971, 1: 782779 };
 
-type Location = { id: number; map: number; x: number; y: number; z: number; lookAt: [number, number, number]; zone: number; kind: string };
+type Location = { id: number; map: number; x: number; y: number; z: number; lookAt: [number, number, number]; zone: number; kind: string; name?: string };
 const all = ((await Bun.file(arg("locations", "locations.json")).json()) as { locations: Location[] }).locations;
 const ids = process.argv.includes("--ids") ? new Set(arg("ids").split(",").map(Number)) : null;
 const sample = ids
@@ -64,7 +64,7 @@ for (const l of sample) {
   writeFileSync(path.join(OUT, `${l.id}.log`), r.stdout.toString() + r.stderr.toString());
   if (r.exitCode !== 0 || !existsSync(raw)) {
     const why = r.exitedDueToTimeout ? "no render (timed out)" : `no render (${r.signalCode ?? `exit ${r.exitCode}`})`;
-    report.push({ id: l.id, zone: l.zone, kind: l.kind, ok: false, why: [why] });
+    report.push({ id: l.id, zone: l.zone, kind: l.kind, name: l.name, ok: false, why: [why] });
     console.log(`${l.id}: ${why}`);
     continue;
   }
@@ -74,7 +74,7 @@ for (const l of sample) {
   renameSync(raw, file);
   run(["magick", file, "-resize", "1024x", "-quality", "80", path.join(OUT, "webp", `${l.id}.webp`)]);
   const verdict = check(read(file, 160, 90));
-  report.push({ id: l.id, zone: l.zone, kind: l.kind, seconds: Math.round(seconds * 10) / 10, ...verdict });
+  report.push({ id: l.id, zone: l.zone, kind: l.kind, name: l.name, seconds: Math.round(seconds * 10) / 10, ...verdict });
   console.log(`${l.id}: ${verdict.ok ? "ok" : verdict.why.join(", ")} (${seconds.toFixed(1)} s)`);
   // (kept as it goes: a long run cut short still says what it made)
   writeFileSync(path.join(OUT, "report.json"), `${JSON.stringify(report, null, 1)}\n`);
@@ -88,7 +88,7 @@ const sheets: string[] = [];
 for (const f of readdirSync(OUT)) if (/^sheet.*\.jpg$/.test(f)) rmSync(path.join(OUT, f));
 for (let i = 0; i < shown.length; i += PER_SHEET) {
   const sheet = path.join(OUT, `sheet-${String(i / PER_SHEET + 1).padStart(2, "0")}.jpg`);
-  const labels = shown.slice(i, i + PER_SHEET).flatMap((r) => ["-label", `#${r.id} zone ${r.zone} ${r.ok ? "ok" : (r.why as string[]).join("+")}`, path.join(OUT, `${r.id}.png`)]);
+  const labels = shown.slice(i, i + PER_SHEET).flatMap((r) => ["-label", `#${r.id} ${r.name ?? `zone ${r.zone}`}${r.ok ? "" : ` (${(r.why as string[]).join("+")})`}`, path.join(OUT, `${r.id}.png`)]);
   run(["montage", ...labels, "-tile", "5x", "-geometry", "384x216+4+4", "-font", "/System/Library/Fonts/Supplemental/Arial.ttf", "-pointsize", "14", sheet]);
   sheets.push(sheet);
 }

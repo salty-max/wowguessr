@@ -1,15 +1,14 @@
-// Where a camera stands and where it looks: a candidate point (a spawn, a
-// patrol's road, a flight master, a subzone's middle) is kept when a
-// character could stand there outdoors, dry, on ground that isn't a cliff,
-// and then turned to the most open heading, a building in view preferred.
-import { apart, corners, Doodads, type Ground, isBuilding, type Wmos } from "./ground";
+// Where a camera can stand: on ground a character could stand on outdoors,
+// dry, not a cliff, clear of buildings and doodads (src/landmarks.ts puts the
+// cameras around landmarks and asks this of each). And the picker's small
+// tools: a seeded random, a shuffle, a split by weights.
+import { Doodads, type Ground, isBuilding, type Wmos } from "./ground";
 
-export type Kind = "subzone" | "road" | "taxi" | "spawn";
-export type Candidate = { kind: Kind; map: number; x: number; y: number; z: number | null; ref: string };
-export type Reason = "off-map" | "hole" | "underground" | "indoors" | "doodad" | "water" | "steep" | "boxed-in";
-export type Aim = { yaw: number; pitch: number; lookAt: [number, number, number] };
+// a point a camera may stand at: z, the height of what stood there (a spawn's),
+// or null (the ground's)
+export type Candidate = { x: number; y: number; z: number | null };
+export type Reason = "off-map" | "hole" | "underground" | "indoors" | "doodad" | "water" | "steep";
 
-const DEG = Math.PI / 180;
 // how far a spawn may stand off the ground and still be on it (a log, a step)
 const ON_GROUND = 2;
 // water deeper than this at the feet: swimming
@@ -29,9 +28,10 @@ export function random(seed: number): () => number {
   };
 }
 
-// The ground a character stands on at a candidate, or why it can't: the
-// terrain's height, or a spawn's own z where it stands on a city's floor (a
-// big WMO over the terrain). Under the terrain is a cave or a cellar, inside a
+// The ground a camera stands on at a point, or why it can't: the terrain's
+// height, or (a point with a height of its own, a spawn's: the tests' and the
+// first picker's) that height where it stands on a city's floor (a big WMO
+// over the terrain). Under the terrain is a cave or a cellar, inside a
 // building's box is indoors, and a point with no height of its own inside any
 // box is refused (its floor unknown).
 const NO_DOODADS = new Doodads([]);
@@ -67,91 +67,6 @@ export function stand(c: Candidate, ground: Ground, wmos: Wmos, doodads = NO_DOO
   return { base };
 }
 
-// The heading a camera at eye height looks along, or null when every way is
-// a wall: 16 headings (the game's facing: 0 north, +x, a quarter turn west, +y),
-// each blocked by ground rising to the eye close by, a cliff in the first 20
-// yards, a building's box in the first 12, the map's edge in the first 20, or
-// a solid doodad near the middle of the frame (any part of it within 30
-// degrees of the heading, looking wider than 20 degrees or within 3 yards),
-// or a slope filling the middle of the frame (on the heading or 15 degrees
-// either side: ground above the eye within 12 yards, or more than 12
-// degrees up at 15 to 45),
-// the rest scored by how far it sees (ground under the eye line) and by a
-// building 25 to 200 yards ahead (a place a player knows). One is drawn by
-// score, its pitch slight: 0.4 of the slope to the ground 40 yards ahead, 2
-// degrees down to 3 up on top, within 6 down and 8 up (lower, the first
-// sample's pictures were mostly ground).
-export function aim(x: number, y: number, eye: number, ground: Ground, wmos: Wmos, rand: () => number, doodads = NO_DOODADS): Aim | null {
-  const headings: { yaw: number; score: number }[] = [];
-  // the solids at eye height around: their corners' bearings, how near
-  const solids = doodads
-    .near(x, y, 60)
-    .filter((d) => d.bottom <= eye + 0.5 && d.top >= eye - 0.5)
-    .map((d) => ({ corners: corners(d, x, y), dist: apart(d, x, y) }));
-  const buildings = wmos.near(x, y, 200).map((w) => ({ x: (w.min_x + w.max_x) / 2, y: (w.min_y + w.max_y) / 2 }));
-  for (let i = 0; i < 16; i++) {
-    const yaw = (((i + (rand() - 0.5) * 0.5) * Math.PI) / 8 + 2 * Math.PI) % (2 * Math.PI);
-    const dx = Math.cos(yaw), dy = Math.sin(yaw);
-    let blocked = false;
-    for (const d of [2, 3, 4, 6, 8, 10, 13, 16, 20]) {
-      const px = x + dx * d, py = y + dy * d, h = ground.height(px, py);
-      if (h == null || (d <= 5 && h > eye - 0.5) || Math.atan2(h - eye, d) > 30 * DEG || (d <= 12 && wmos.at(px, py, eye).some(isBuilding))) {
-        blocked = true;
-        break;
-      }
-    }
-    // a solid doodad in the middle of the frame (any part of it within 30
-    // degrees of the heading): one looking wider than 20 degrees, or any
-    // within 3 yards
-    if (solids.some((d) => {
-      const offs = d.corners.map((b) => ((b - yaw + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
-      const lo = Math.min(...offs), hi = Math.max(...offs);
-      // (spread over more than a half turn: it lies behind, across the back)
-      if (hi - lo > Math.PI) return false;
-      return lo < 30 * DEG && hi > -30 * DEG && (hi - lo > 20 * DEG || d.dist < 3);
-    }))
-      continue;
-    if (blocked) continue;
-    // a slope filling the middle of the frame (the heading and 15 degrees
-    // either side): ground above the eye within 12 yards, or seen more than
-    // 12 degrees up at 15 to 45 yards (from 15, not 20: nothing else would
-    // look at 13 to 19, where a bump fills more of the frame than at 20)
-    if ([-15, 0, 15].some((side) => {
-      const ex = Math.cos(yaw + side * DEG), ey = Math.sin(yaw + side * DEG);
-      const at = (d: number) => ground.height(x + ex * d, y + ey * d);
-      return [3, 6, 9, 12].some((d) => (at(d) ?? -Infinity) > eye) || [15, 20, 25, 30, 35, 40, 45].some((d) => Math.atan2((at(d) ?? -Infinity) - eye, d) > 12 * DEG);
-    }))
-      continue;
-    const far = [30, 45, 60, 90, 120, 160].map((d) => {
-      const h = ground.height(x + dx * d, y + dy * d);
-      return h == null ? null : Math.atan2(h - eye, d);
-    });
-    const seen = far.filter((e) => e != null && e < 8 * DEG).length / far.length;
-    let score = 0.3 + seen;
-    if (far.some((e) => e == null)) score *= 0.2; // the map's edge: the void
-    if (far.some((e) => e != null && e > 35 * DEG)) score *= 0.3; // a mountain's wall
-    if (buildings.some((b) => {
-      const d = Math.hypot(b.x - x, b.y - y);
-      const off = Math.abs(((Math.atan2(b.y - y, b.x - x) - yaw + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
-      return d >= 25 && off < 25 * DEG;
-    }))
-      score += 0.6;
-    headings.push({ yaw, score });
-  }
-  if (!headings.length) return null;
-  const total = headings.reduce((s, h) => s + h.score ** 2, 0);
-  let draw = rand() * total, pick = headings[0];
-  for (const h of headings) if ((draw -= h.score ** 2) <= 0) { pick = h; break; }
-  const ahead = ground.height(x + Math.cos(pick.yaw) * 40, y + Math.sin(pick.yaw) * 40) ?? eye;
-  const pitch = Math.min(8 * DEG, Math.max(-6 * DEG, Math.atan2(ahead - eye, 40) * 0.4 + (rand() * 5 - 2) * DEG));
-  const d = 30;
-  return {
-    yaw: pick.yaw,
-    pitch,
-    lookAt: [x + Math.cos(pick.yaw) * Math.cos(pitch) * d, y + Math.sin(pick.yaw) * Math.cos(pitch) * d, eye + Math.sin(pitch) * d],
-  };
-}
-
 // n split over weights, largest remainders first: the counts sum to n
 export function quotas<K>(weights: Map<K, number>, n: number): Map<K, number> {
   const sum = [...weights.values()].reduce((a, b) => a + b, 0);
@@ -172,91 +87,4 @@ export function shuffle<T>(list: T[], rand: () => number): T[] {
     [list[i], list[j]] = [list[j], list[i]];
   }
   return list;
-}
-
-// A zone's candidates in the order they are tried: a subzone's middle, a
-// road, a flight master and a spawn in turn, each kind shuffled.
-export function order(cands: Candidate[], rand: () => number): Candidate[] {
-  const kinds = (["subzone", "road", "taxi", "spawn"] as Kind[]).map((k) => shuffle(cands.filter((c) => c.kind === k), rand));
-  const out: Candidate[] = [];
-  for (let i = 0; kinds.some((l) => i < l.length); i++) for (const l of kinds) if (i < l.length) out.push(l[i]);
-  return out;
-}
-
-export type Location = {
-  id: number; map: number; x: number; y: number; z: number; yaw: number; pitch: number; lookAt: [number, number, number];
-  ground: number; zone: number; subzone: number; kind: Kind; ref: string;
-};
-export type Spread = { picked: Location[]; rejects: Record<Reason, number>; tried: number; short: number };
-
-// Each zone's share (want) from its candidates in turn (queues, consumed): no
-// two cameras of a zone within spacing yards, at most perSubzone a subzone.
-// The share of a zone that ran dry (a city underground) goes to the zones
-// that still have candidates, one at a time, spacing halved only when a whole
-// pass gives none, down to 20 yards.
-export function spread(
-  want: Map<number, number>,
-  queues: Map<number, Candidate[]>,
-  worlds: Map<number, { ground: Ground; wmos: Wmos; doodads?: Doodads }>,
-  rand: () => number,
-  spacing = 150,
-  perSubzone = 3,
-): Spread {
-  const picked: Location[] = [];
-  const rejects: Record<Reason, number> = { "off-map": 0, hole: 0, underground: 0, indoors: 0, doodad: 0, water: 0, steep: 0, "boxed-in": 0 };
-  const perSub = new Map<number, number>();
-  // candidates too close to a pick, kept for a pass with a smaller spacing
-  const aside = new Map<number, Candidate[]>();
-  let tried = 0;
-  const r2 = (v: number) => Math.round(v * 100) / 100;
-  const fill = (zone: number, n: number, apart: number) => {
-    const queue = queues.get(zone) ?? [];
-    let got = 0;
-    while (got < n && queue.length) {
-      const c = queue.shift()!;
-      const { ground, wmos, doodads } = worlds.get(c.map)!;
-      const subzone = ground.area(c.x, c.y)!;
-      if ((perSub.get(subzone) ?? 0) >= perSubzone) continue;
-      if (picked.some((p) => p.zone === zone && p.map === c.map && Math.hypot(p.x - c.x, p.y - c.y) < apart)) {
-        (aside.get(zone) ?? aside.set(zone, []).get(zone)!).push(c);
-        continue;
-      }
-      tried++;
-      const s = stand(c, ground, wmos, doodads);
-      if ("reason" in s) {
-        rejects[s.reason]++;
-        continue;
-      }
-      const eye = s.base + 2 + rand();
-      const a = aim(c.x, c.y, eye, ground, wmos, rand, doodads);
-      if (!a) {
-        rejects["boxed-in"]++;
-        continue;
-      }
-      picked.push({
-        id: picked.length + 1, map: c.map, x: r2(c.x), y: r2(c.y), z: r2(eye),
-        yaw: Math.round(a.yaw * 1000) / 1000, pitch: Math.round(a.pitch * 1000) / 1000,
-        lookAt: a.lookAt.map(r2) as [number, number, number],
-        ground: r2(s.base), zone, subzone, kind: c.kind, ref: c.ref,
-      });
-      perSub.set(subzone, (perSub.get(subzone) ?? 0) + 1);
-      got++;
-    }
-    return got;
-  };
-  let short = 0;
-  for (const [zone, n] of want) short += n - fill(zone, n, spacing);
-  for (let apart = spacing / 2; short > 0 && apart >= 20; apart /= 2) {
-    for (const [zone, list] of aside) queues.set(zone, [...list, ...(queues.get(zone) ?? [])]);
-    aside.clear();
-    for (let gave = 1; short > 0 && gave; ) {
-      gave = 0;
-      for (const zone of want.keys()) if (short > 0) {
-        const got = fill(zone, 1, apart);
-        short -= got;
-        gave += got;
-      }
-    }
-  }
-  return { picked, rejects, tried, short };
 }

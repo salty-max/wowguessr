@@ -1,7 +1,9 @@
 // The picker's parts on a made-up patch of ground: no database, no game file.
 import { describe, expect, test } from "bun:test";
 import { apart, CHUNK, type ChunkRow, type DoodadRow, Doodads, Ground, ORIGIN, solid, UNIT, type WmoRow, Wmos } from "../src/ground";
-import { aim, type Candidate, order, quotas, random, spread, stand } from "../src/pick";
+import { boxShare, project, rayBox, rayGround, raySolid, shoot } from "../src/frame";
+import { choose, clear, landmarks, viewpoint, type World } from "../src/landmarks";
+import { type Candidate, quotas, random, shuffle, stand } from "../src/pick";
 import { check } from "../src/imagecheck";
 
 // a chunk at (row, col): flat at z, or its heights from a function of the vertex
@@ -23,7 +25,7 @@ const field = (center: (r: number, c: number) => ChunkRow | null = () => null) =
 };
 // the middle of chunk (500, 500)
 const mx = ORIGIN - 500.5 * CHUNK, my = ORIGIN - 500.5 * CHUNK;
-const at = (more: Partial<Candidate> = {}): Candidate => ({ kind: "spawn", map: 0, x: mx, y: my, z: 50, ref: "test", ...more });
+const at = (more: Partial<Candidate> = {}): Candidate => ({ x: mx, y: my, z: 50, ...more });
 const box = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number): WmoRow =>
   ({ unique_id: 1, min_x: x0, min_y: y0, min_z: z0, max_x: x1, max_y: y1, max_z: z1 });
 
@@ -68,50 +70,6 @@ describe("where a camera stands", () => {
   });
 });
 
-describe("where a camera looks", () => {
-  test("away from a wall of ground, toward the open", () => {
-    // a ridge rising sharply to the north (+x): rows below 500 are 40 yards up
-    const ridge = new Ground(field((r, c) => (r < 500 ? chunk(r, c, 90) : null)));
-    for (let seed = 1; seed <= 20; seed++) {
-      const a = aim(mx, my, 52.5, ridge, new Wmos([]), random(seed))!;
-      expect(Math.cos(a.yaw)).toBeLessThan(0.5);
-    }
-  });
-  test("a hill that would fill the frame blocks its heading (flat for 20 yards, then seen more than 12 degrees up)", () => {
-    // walls 8 yards off all round but a 90 degree gap to the north (+x),
-    // where the ground is flat for 20 yards (no cliff rule), then climbs 0.6 a
-    // yard: 45 yards out it stands 12.5 yards over the eye, 15 degrees up
-    const gap = (open: boolean) => new Ground(field((r, c) => chunk(r, c, (vr, vk) => {
-      const dx = (500.5 - r) * CHUNK - vr * UNIT, dy = (500.5 - c) * CHUNK - vk * UNIT;
-      if (Math.hypot(dx, dy) > 8 && Math.abs(Math.atan2(dy, dx)) > Math.PI / 4) return 200;
-      return 50 + (open ? 0 : Math.max(0, dx - 20) * 0.6);
-    })));
-    // with the north flat, the gap is the one way it looks; with the hill, none
-    const flat = aim(mx, my, 52.5, gap(true), new Wmos([]), random(1))!;
-    expect(Math.cos(flat.yaw)).toBeGreaterThan(Math.cos(Math.PI / 4));
-    expect(aim(mx, my, 52.5, gap(false), new Wmos([]), random(1))).toBeNull();
-  });
-  test("a mound over the eye 10 yards ahead blocks its heading (under the cliff rule: 14 degrees up)", () => {
-    const mound = new Ground(field((r, c) => chunk(r, c, (vr, vk) => {
-      const dx = (500.5 - r) * CHUNK - vr * UNIT, dy = (500.5 - c) * CHUNK - vk * UNIT;
-      if (Math.hypot(dx, dy) > 8 && Math.abs(Math.atan2(dy, dx)) > Math.PI / 4) return 200;
-      return dx >= 8 && dx <= 13 ? 55 : 50;
-    })));
-    expect(aim(mx, my, 52.5, mound, new Wmos([]), random(1))).toBeNull();
-  });
-  test("boxed in on every side (a pit): none", () => {
-    const pit = new Ground(field((r, c) => (r === 500 && c === 500 ? chunk(r, c, (vr, vk) => 50 + 30 * Math.max(Math.abs(vr - 4), Math.abs(vk - 4))) : chunk(r, c, 200))));
-    expect(aim(mx, my, 52.5, pit, new Wmos([]), random(1))).toBeNull();
-  });
-  test("the look-at lies 30 yards along the yaw and the pitch", () => {
-    const a = aim(mx, my, 52.5, new Ground(field()), new Wmos([]), random(3))!;
-    const [x, y, z] = a.lookAt;
-    expect(Math.hypot(x - mx, y - my, z - 52.5)).toBeCloseTo(30, 0);
-    expect(Math.atan2(y - my, x - mx)).toBeCloseTo(a.yaw > Math.PI ? a.yaw - 2 * Math.PI : a.yaw, 2);
-    expect(Math.abs(a.pitch)).toBeLessThanOrEqual(8 * Math.PI / 180 + 1e-9);
-  });
-});
-
 describe("the doodads", () => {
   // a model with a collision box 1 yard either side and 6 high, placed at (x, y) at scale
   const rock = (x: number, y: number, scale = 1, z = 50): DoodadRow =>
@@ -141,60 +99,118 @@ describe("the doodads", () => {
     expect(stand(at(), flat, new Wmos([]), new Doodads([rock(mx + 1.5, my)]))).toEqual({ reason: "doodad" });
     expect(stand(at(), flat, new Wmos([]), new Doodads([rock(mx + 4, my)]))).toEqual({ base: 50 });
   });
-  test("never looking at a rock that would fill the middle of the frame", () => {
-    // 2 yards wide, 4 yards north (+x): about 28 degrees wide (to its corners)
-    const near = new Doodads([rock(mx + 5, my)]);
-    for (let seed = 1; seed <= 30; seed++) {
-      const a = aim(mx, my, 52.5, new Ground(field()), new Wmos([]), random(seed), near)!;
-      const off = Math.abs(((a.yaw + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
-      expect(off).toBeGreaterThan(30 * Math.PI / 180);
-    }
-  });
-  test("a small one far off changes nothing", () => {
-    const far = new Doodads([rock(mx + 40, my)]), flat = new Ground(field());
-    for (let seed = 1; seed <= 10; seed++)
-      expect(aim(mx, my, 52.5, flat, new Wmos([]), random(seed), far)).toEqual(aim(mx, my, 52.5, flat, new Wmos([]), random(seed)));
-  });
+
 });
 
-describe("the spread", () => {
+describe("the picker's tools", () => {
   test("quotas sum to the count, by weight", () => {
     const q = quotas(new Map([["a", 1], ["b", 1], ["c", 2]]), 10);
     expect([...q.values()].reduce((s, n) => s + n, 0)).toBe(10);
     expect(q.get("c")).toBe(5);
   });
-  test("the kinds take turns", () => {
-    const c = (kind: Candidate["kind"], i: number): Candidate => ({ ...at(), kind, ref: `${kind}${i}` });
-    const list = order([c("spawn", 1), c("spawn", 2), c("road", 1), c("subzone", 1)], random(1));
-    expect(list.map((l) => l.kind)).toEqual(["subzone", "road", "spawn", "spawn"]);
-  });
-  // a zone of open flat ground (area 12), its candidates in a line 30 yards apart
-  const world = () => new Map([[0, { ground: new Ground(field()), wmos: new Wmos([]) }]]);
-  const line = (n: number) => Array.from({ length: n }, (_, i): Candidate => ({ ...at(), z: null, kind: "road", x: mx - 120 + i * 30, ref: `p${i}` }));
-  test("no two cameras of a zone closer than the spacing, at most so many a subzone", () => {
-    const s = spread(new Map([[1, 3]]), new Map([[1, line(9)]]), world(), random(1), 100, 5);
-    expect(s.picked.length).toBe(3);
-    for (const a of s.picked) for (const b of s.picked) if (a !== b) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(100);
-    const capped = spread(new Map([[1, 4]]), new Map([[1, line(9)]]), world(), random(1), 20, 2);
-    expect(capped.picked.length).toBe(2);
-  });
-  test("a dry zone's share goes to one with candidates, closer together, those set aside tried again", () => {
-    // 9 points 30 yards apart: 2 fit 150 yards apart, more once the spacing halves
-    const alone = spread(new Map([[1, 9]]), new Map([[1, line(9)]]), world(), random(1), 150, 10);
-    const shared = spread(new Map([[1, 2], [2, 7]]), new Map([[1, line(9)], [2, []]]), world(), random(1), 150, 10);
-    expect(shared.picked.length).toBeGreaterThan(2);
-    expect(shared.picked.every((p) => p.zone === 1)).toBe(true);
-    expect(shared.short).toBe(9 - shared.picked.length);
-    expect(alone.picked.length).toBe(shared.picked.length);
-    for (const a of shared.picked) for (const b of shared.picked) if (a !== b) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(37.5);
-  });
-  test("a point with no height of its own inside a WMO's box is refused (its floor unknown)", () => {
-    const city = new Wmos([box(mx - 600, my - 600, 0, mx + 600, my + 600, 200)]);
-    expect(stand(at({ z: null }), new Ground(field()), city)).toEqual({ reason: "indoors" });
-  });
-  test("the same seed, the same draw", () => {
+  test("the same seed, the same draw and the same shuffle", () => {
     const a = random(7), b = random(7);
     expect([a(), a(), a()]).toEqual([b(), b(), b()]);
+    expect(shuffle([1, 2, 3, 4, 5], random(3))).toEqual(shuffle([1, 2, 3, 4, 5], random(3)));
+  });
+});
+
+describe("the lens", () => {
+  // a camera 20 yards south of a point, at its height, looking north at it
+  const view = { eye: [mx - 20, my, 60] as [number, number, number], at: [mx, my, 60] as [number, number, number] };
+  test("the look-at is the middle of the picture, east to the right, up up", () => {
+    expect(project(view, [mx, my, 60])).toMatchObject({ x: 0, y: 0, front: true });
+    // (east is -y: the game's y runs west)
+    expect(project(view, [mx, my - 5, 60]).x).toBeGreaterThan(0);
+    expect(project(view, [mx, my, 65]).y).toBeGreaterThan(0);
+    expect(project(view, [mx - 40, my, 60]).front).toBe(false);
+  });
+  test("a box's share of the picture, whole or cut by the frame", () => {
+    const small = box(mx - 2, my - 2, 58, mx + 2, my + 2, 62);
+    const s = boxShare(view, small, 0);
+    expect(s.clipped).toBe(false);
+    expect(s.share).toBeGreaterThan(0.01);
+    expect(s.share).toBeLessThan(0.1);
+    expect(boxShare(view, box(mx - 2, my - 80, 0, mx + 2, my + 80, 120), 0).clipped).toBe(true);
+    // its part under the floor is left out
+    expect(boxShare(view, small, 61).share).toBeLessThan(s.share);
+  });
+  test("rays meet boxes, turned boxes and the ground where they are", () => {
+    const o: [number, number, number] = [0, 0, 10], north: [number, number, number] = [1, 0, 0];
+    expect(rayBox(o, north, box(5, -1, 0, 6, 1, 20))).toBeCloseTo(5);
+    expect(rayBox(o, north, box(5, 2, 0, 6, 3, 20))).toBeNull();
+    // a rock 2 yards across turned a quarter: its box's x along the game's y
+    const rock = { cx: 8, cy: 0, fx: 0, fy: 1, hx: 3, hy: 1, bottom: 0, top: 20, reach: 4 };
+    expect(raySolid(o, north, rock)).toBeCloseTo(7);
+    const down: [number, number, number] = [Math.SQRT1_2, 0, -Math.SQRT1_2];
+    const flat = new Ground(field());
+    const hit = rayGround([mx, my, 60], down, flat)!;
+    expect(60 + down[2] * hit).toBeLessThanOrEqual(50.01);
+    expect(rayGround([mx, my, 60], [1, 0, 0], flat, 100)).toBeNull();
+  });
+  test("a cast counts what the landmark fills, what hides it and the sky", () => {
+    const flat = new Ground(field());
+    const house = box(mx + 20, my - 5, 50, mx + 30, my + 5, 60);
+    const v = { eye: [mx - 10, my, 53] as [number, number, number], at: [mx + 25, my, 55] as [number, number, number] };
+    const open = shoot(v, house, 50, [], flat);
+    expect(open.fill).toBeGreaterThan(0.02);
+    expect(open.hidden).toBe(0);
+    expect(open.sky).toBeGreaterThan(0.2);
+    // a wall between them hides it
+    const wall = box(mx, my - 20, 40, mx + 2, my + 20, 80);
+    expect(shoot(v, house, 50, [wall], flat).hidden).toBeGreaterThan(0.9);
+  });
+});
+
+describe("the landmarks", () => {
+  const flat = () => new Ground(field());
+  const zoneOf = (a: number) => (a === 99 ? 99 : 12);
+  // the subzone's area id is 12 in the field (its zone: 99, so 12 is named)
+  const named = (rows: ChunkRow[]) => rows.map((r) => ({ ...r, area_id: 12 }));
+  const zone99 = (a: number) => (a === 12 ? 99 : a);
+  const house = (x: number, y: number, size = 12, id = 1) => ({ ...box(x - size / 2, y - size / 2, 49, x + size / 2, y + size / 2, 62), unique_id: id });
+  test("a WMO standing in a named place, not a cave, not tiny, not in water, the biggest first", () => {
+    const g = new Ground(named(field()));
+    const l = landmarks(0, g, [house(mx, my, 12, 1), house(mx + 100, my, 20, 2), house(mx, my + 100, 5, 3)], zone99);
+    expect(l.map((x) => x.box.unique_id)).toEqual([2, 1]);
+    // a cave: its box under the ground
+    expect(landmarks(0, g, [{ ...house(mx, my), min_z: 20, max_z: 52 }], zone99)).toEqual([]);
+    // at most 2 a subzone, 80 yards apart
+    expect(landmarks(0, g, [house(mx, my, 12, 1), house(mx + 30, my, 12, 2), house(mx + 120, my, 12, 3), house(mx - 120, my, 12, 4)], zone99).length).toBe(2);
+    // the zone itself is no named place
+    expect(landmarks(0, flat(), [house(mx, my)], zoneOf)).toEqual([]);
+  });
+  test("a viewpoint looks at the landmark, frames it, and sees it", () => {
+    const g = new Ground(named(field()));
+    const world: World = { ground: g, wmos: new Wmos([house(mx, my, 16)]), doodads: new Doodads([]), leaves: new Doodads([]) };
+    const [l] = landmarks(0, g, [house(mx, my, 16)], zone99);
+    const v = viewpoint(l, world)!;
+    expect(v).not.toBeNull();
+    expect(v.view.at).toEqual(l.at);
+    expect(v.share).toBeGreaterThanOrEqual(0.12);
+    expect(v.shot.hidden).toBeLessThanOrEqual(1 / 3);
+    const d = Math.hypot(v.view.eye[0] - mx, v.view.eye[1] - my);
+    expect(d).toBeGreaterThanOrEqual(25);
+    expect(d).toBeLessThanOrEqual(100);
+  });
+  test("a heading with a rock in the face, or another house within 12 yards, isn't clear", () => {
+    const g = new Ground(field());
+    const rock: DoodadRow = { x: mx + 5, y: my, z: 50, yaw: 0, scale: 1, col_min_x: -2, col_min_y: -2, col_min_z: 0, col_max_x: 2, col_max_y: 2, col_max_z: 6 };
+    const target = house(mx + 50, my, 12, 9);
+    const w = (d: DoodadRow[], h: WmoRow[] = []): World => ({ ground: g, wmos: new Wmos(h), doodads: new Doodads(d), leaves: new Doodads([]) });
+    expect(clear(mx, my, 53, 0, w([]), target)).toBe(true);
+    expect(clear(mx, my, 53, 0, w([rock]), target)).toBe(false);
+    expect(clear(mx, my, 53, 0, w([], [house(mx + 8, my, 6, 2)]), target)).toBe(false);
+    // the landmark's own box never blocks
+    expect(clear(mx, my, 53, 0, w([], [{ ...target, min_x: mx + 5 }]), { ...target, min_x: mx + 5 })).toBe(true);
+  });
+  test("chosen: the best of a zone first, its share, 2 a subzone, 80 yards apart", () => {
+    const f = (zone: number, area: number, x: number, score: number, id: number) =>
+      ({ zone, landmark: { area, at: [x, 0, 0], box: { unique_id: id } }, view: { score } }) as unknown as Parameters<typeof choose>[0][number];
+    const found = [f(1, 10, 0, 0.5, 1), f(1, 10, 100, 0.9, 2), f(1, 10, 200, 0.7, 3), f(1, 11, 30, 0.8, 4), f(2, 20, 0, 0.1, 5)];
+    const got = choose(found, new Map([[1, 3], [2, 1]]));
+    // zone 1: 2 (best), not 4 (70 yards from 2), 3, not 1 (its subzone's third); zone 2: 5
+    expect(got.map((g) => g.landmark.box.unique_id)).toEqual([2, 3, 5]);
   });
 });
 
