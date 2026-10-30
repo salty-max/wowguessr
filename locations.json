@@ -1,7 +1,9 @@
 {
- "about": "Cameras for geoguessr's renders, by scripts/pick.ts from wow-data's classic.db. x, y, z: world yards (the camera, eye height). yaw: the game's facing in radians (0 north, +x, a quarter turn west, +y). pitch: radians up. lookAt: world yards, 30 yards ahead. ground: the height the eye stands over. zone, subzone: AreaTable ids.",
+ "about": "Cameras for geoguessr's renders, by scripts/pick.ts from wow-data's classic.db and classic-terrain.db. x, y, z: world yards (the camera, eye height). yaw: the game's facing in radians (0 north, +x, a quarter turn west, +y). pitch: radians up. lookAt: world yards, 30 yards ahead. ground: the height the eye stands over. zone, subzone: AreaTable ids.",
  "seed": 1,
- "wowData": "db-dd3d5b7b2d43",
+ "wowData": "db-c415183a7ee7",
+ "terrainBuild": "1.15.9.70576",
+ "terrainParser": "43220557",
  "tried": 832,
  "rejects": {
   "off-map": 0,

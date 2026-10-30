@@ -2,14 +2,16 @@
 
 `bun scripts/pick.ts [--count 500] [--seed 1] [--out locations.json]` picks
 cameras on Eastern Kingdoms (map 0) and Kalimdor (map 1) from wow-data's
-`classic.db` only (reached through the family folder, `src/family.ts`), and
-writes `locations.json`. The same seed and database give the same file.
-It runs in about a second.
+`classic.db` and `classic-terrain.db` only (reached through the family
+folder, `src/family.ts`), and writes `locations.json`. The same seed and
+databases give the same file. A terrain database read at another pin or by
+another parser is refused. It runs in about a second.
 
 ## What it reads
 
-- `terrain_chunk` and `wmo_placement`, added to wow-data for this step
-  (`wow-data/src/terrain.ts`): the ground's height, holes, the liquid over
+- `terrain_chunk` and `wmo_placement`, added to wow-data for this step in
+  a database of their own (`bun wow-data/bin/terrain.ts classic`, never
+  released: `wow-data/src/terrain.ts`): the ground's height, holes, the liquid over
   each 4-yard cell and the area the client names there, from the map files'
   root ADTs; each WMO's bounding box from the `_obj0` ADTs. The heights
   were checked against the Classic database's spawns (median 0.08 yards off
@@ -47,7 +49,8 @@ It runs in about a second.
 
 ## locations.json
 
-`{ about, seed, wowData, tried, rejects, perZone, locations: [...] }`, each
+`{ about, seed, wowData, terrainBuild, terrainParser, tried, rejects, perZone,
+locations: [...] }`, each
 location `{ id, map, x, y, z, yaw, pitch, lookAt: [x, y, z], ground, zone,
 subzone, kind, ref }`. World yards (the renderer's `-camera` and `-lookat`
 take them as they are), yaw the game's facing in radians (0 north, +x, a

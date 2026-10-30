@@ -1,5 +1,6 @@
 // The location picker (step 3 of ideas/geoguessr.md): cameras on Eastern
-// Kingdoms and Kalimdor, from wow-data's database only, spread over the
+// Kingdoms and Kalimdor, from wow-data's databases only (classic.db and the
+// ground's classic-terrain.db), spread over the
 // zones that have a zone map (by the square root of their size), written to
 // locations.json. Deterministic for a seed.
 //   bun scripts/pick.ts [--count 500] [--seed 1] [--out locations.json]
@@ -19,9 +20,12 @@ const SPACING = 150, PER_SUBZONE = 3;
 const MAPS = [0, 1];
 
 const { openDb } = (await import(familyPath("wow-data", "src", "db.ts"))) as { openDb: (game: string) => Database };
+const { openTerrain } = (await import(familyPath("wow-data", "src", "terrainDb.ts"))) as { openTerrain: (game: string) => Database };
 const db = openDb("classic");
-if (!db.query("SELECT 1 FROM sqlite_master WHERE name = 'terrain_chunk'").get())
-  throw new Error("classic.db has no terrain_chunk: rebuild it (bun wow-data/bin/build.ts classic)");
+// the ground: its own database (bun wow-data/bin/terrain.ts classic), refused
+// when read at another pin or by another parser, not just said
+process.env.WOW_DATA_STRICT = "1";
+const terrain = openTerrain("classic");
 const rand = random(SEED);
 
 // the zone of an area: up its parents to the top
@@ -38,8 +42,8 @@ const zones = new Set(
 
 const grounds = new Map<number, Ground>(), boxes = new Map<number, Wmos>();
 for (const map of MAPS) {
-  grounds.set(map, new Ground(db.query("SELECT * FROM terrain_chunk WHERE map_id = ? ORDER BY row, col").all(map) as ChunkRow[]));
-  boxes.set(map, new Wmos(db.query("SELECT * FROM wmo_placement WHERE map_id = ? ORDER BY unique_id").all(map) as WmoRow[]));
+  grounds.set(map, new Ground(terrain.query("SELECT * FROM terrain_chunk WHERE map_id = ? ORDER BY row, col").all(map) as ChunkRow[]));
+  boxes.set(map, new Wmos(terrain.query("SELECT * FROM wmo_placement WHERE map_id = ? ORDER BY unique_id").all(map) as WmoRow[]));
 }
 
 // the candidates
@@ -88,13 +92,16 @@ const name = (id: number) => (db.query("SELECT AreaName_lang n FROM client_AreaT
 const perZone = Object.fromEntries([...want.keys()].map((z) => [name(z), picked.filter((p) => p.zone === z).length]));
 const rejected = Object.values(rejects).reduce((a, b) => a + b, 0);
 const tag = (db.query("SELECT value FROM meta WHERE key = 'tag'").get() as { value: string } | null)?.value ?? null;
+const terrainMeta = (key: string) => (terrain.query("SELECT value FROM meta WHERE key = ?").get(key) as { value: string } | null)?.value ?? null;
 writeFileSync(
   OUT,
   `${JSON.stringify(
     {
-      about: "Cameras for geoguessr's renders, by scripts/pick.ts from wow-data's classic.db. x, y, z: world yards (the camera, eye height). yaw: the game's facing in radians (0 north, +x, a quarter turn west, +y). pitch: radians up. lookAt: world yards, 30 yards ahead. ground: the height the eye stands over. zone, subzone: AreaTable ids.",
+      about: "Cameras for geoguessr's renders, by scripts/pick.ts from wow-data's classic.db and classic-terrain.db. x, y, z: world yards (the camera, eye height). yaw: the game's facing in radians (0 north, +x, a quarter turn west, +y). pitch: radians up. lookAt: world yards, 30 yards ahead. ground: the height the eye stands over. zone, subzone: AreaTable ids.",
       seed: SEED,
       wowData: tag,
+      terrainBuild: terrainMeta("build"),
+      terrainParser: terrainMeta("parser"),
       tried,
       rejects,
       perZone,
