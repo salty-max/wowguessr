@@ -2,5 +2,8 @@
 .harness/
 .cache/
 node_modules/
-# the game page's build (scripts/site.ts): rendered pictures and drawn maps
-site/
+# the game page's data (scripts/site.ts: the renders, the game's map art) and its build
+web/public/maps/
+web/public/pictures/
+web/public/rounds.json
+dist/

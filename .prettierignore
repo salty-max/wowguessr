@@ -1,0 +1,10 @@
+# Prettier formats the page (web/); the scripts keep their own style
+*
+!web/
+!web/**
+web/public/
+!vite.config.ts
+!eslint.config.mjs
+!src/
+src/*
+!src/atlas.ts

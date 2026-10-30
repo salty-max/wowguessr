@@ -9,5 +9,5 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["src", "scripts", "test", "web"]
+  "include": ["src", "scripts", "test"]
 }

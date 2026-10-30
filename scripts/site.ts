@@ -1,19 +1,19 @@
-// The game page, built into site/ (never committed: the pictures are the
-// renders', the maps the game's own art, both rebuilt from here):
+// The game page's data, written into web/public/ for the Vite app (never
+// committed: the pictures are the renders', the maps the game's own art,
+// both rebuilt from here; bun run dev and bun run build run this first):
 //
 //   bun scripts/site.ts [--pictures <dir>] [--maps] [--marks]
 //
-// - site/maps/<map>.webp, site/maps/zones/<ui>.webp: each continent's world
+// - maps/<map>.webp, maps/zones/<ui>.webp: each continent's world
 //   map and each played zone's (and city's), the game's own art (the user's
-//   call, 30 October 2026; src/mapart.ts), and site/maps/<map>.json: the
+//   call, 30 October 2026; src/mapart.ts), and maps/<map>.json: the
 //   frames, the areas under each chunk (src/areas.ts, from wow-data's
 //   classic-terrain.db), their names (src/atlas.ts' Atlas). Composed again
 //   with --maps, or when missing.
-// - site/rounds.json: the cameras of locations.json, as much as the page needs.
-// - site/pictures/<id>.webp: each camera's render, from --pictures (default
+// - rounds.json: the cameras of locations.json, as much as the page needs.
+// - pictures/<id>.webp: each camera's render, from --pictures (default
 //   .cache/review3/webp, the pictures the user passed by eye, 30 October
 //   2026). A camera with none refuses the build.
-// - site/index.html, style.css, game.js: the page (web/), bundled.
 // - --marks: .cache/site/marks/<ui>.png, every camera on its zone's map (a
 //   red dot), and .cache/site/marks.jpg, all of them on one sheet, to look
 //   at the conversion (the game's art too: .cache/ is never committed).
@@ -28,7 +28,7 @@ import { type ChunkRow, Ground } from "../src/ground";
 import { compose, HEIGHT, layers, WIDTH } from "../src/mapart";
 
 const ROOT = path.join(import.meta.dir, "..");
-const SITE = path.join(ROOT, "site");
+const SITE = path.join(ROOT, "web", "public");
 const { values: args } = parseArgs({
   options: {
     pictures: { type: "string", default: path.join(ROOT, ".cache", "review3", "webp") },
@@ -182,11 +182,7 @@ for (const l of locations) {
   copied++;
 }
 
-// the page
-const built = await Bun.build({ entrypoints: [path.join(ROOT, "web", "game.ts")], outdir: SITE, target: "browser", minify: true });
-if (!built.success) throw new Error(built.logs.map(String).join("\n"));
-for (const f of ["index.html", "style.css"]) copyFileSync(path.join(ROOT, "web", f), path.join(SITE, f));
-console.log(`site/: ${rounds.length} rounds, ${copied} pictures copied, page bundled`);
+console.log(`web/public/: ${rounds.length} rounds, ${copied} pictures copied`);
 
 // the marks, to look at: each zone's map with its cameras, then one sheet
 if (args.marks) {

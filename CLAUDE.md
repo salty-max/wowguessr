@@ -9,18 +9,21 @@ WoW addons folder but not an addon.
 
 ## Commands
 
-- `bun run check`: the check (tsc, bun test). Run it through q: `bun harness/q.ts check -- bun run check`.
 - `bun scripts/pick.ts`: `locations.json`, a camera on each chosen landmark (a WMO in a
   named place, a city's district, a camp, a flight master, a graveyard), from wow-data's classic.db and classic-terrain.db
   (`bun wow-data/bin/terrain.ts classic` first; `docs/picker.md`).
 - `bun scripts/render.ts --renderer <binary> --workdir <dir> --casc <dir>`: a sample rendered,
   checked and laid on contact sheets in `.cache/renders/` (`--all`: every one).
 - `bun run dev`: the game page at http://127.0.0.1:4195 (the family's
-  `geoguessr-game` launch entry): `scripts/site.ts` builds `site/` (the
-  game's world maps composed, the rounds, the pictures from
-  `.cache/review3/webp`, the page bundled; `--maps` composes the maps again,
-  `--marks` draws every camera on its zone's map), `scripts/serve.ts` serves
-  it. Never committed.
+  `geoguessr-game` launch entry): `scripts/site.ts` writes the data into
+  `web/public/` (the game's world maps composed, the rounds, the pictures
+  from `.cache/review3/webp`; `--maps` composes the maps again, `--marks`
+  draws every camera on its zone's map), then Vite serves the React app
+  (`web/`). `bun run build`: the same into `dist/`. Neither committed.
+- `bun run check`, through q (`bun harness/q.ts check -- bun run check`): tsc
+  (the scripts, then `web/`), ESLint, Prettier's check, the tests. `bun run
+  format` formats what Prettier covers: `web/`, the shared `src/atlas.ts`
+  and the configs (the scripts keep their own style).
 - `bun harness/board.ts list`, `bun harness/hooks.ts status`.
 
 ## Docs
@@ -29,8 +32,9 @@ WoW addons folder but not an addon.
   patches, timings, what is open).
 - `docs/picker.md`: the landmark picker (what a landmark is, how its camera is
   chosen, locations.json, the samples looked at, the first picker's history).
-- `docs/game.md`: the game page (a game, the score, the game's world maps
-  and their frames, how the conversion was checked).
+- `docs/game.md`: the game page (the React app, its look and layout, a
+  game, the score, the game's world maps and their frames, how the
+  conversion was checked).
 
 ## Hard rules
 
@@ -40,8 +44,9 @@ WoW addons folder but not an addon.
   ADT, CASC data or listfile in this repository, committed or not. The
   renderer and its build live in a scratch folder outside it. One exception,
   the user's call (30 October 2026): the game page's maps are the game's own
-  world map art (PNGs from wow-data's mirror), composed into `site/` and
-  `--marks`' `.cache/site/` only (both gitignored), never committed. Putting them on a public page is the user's go, asked
+  world map art (PNGs from wow-data's mirror), composed into `web/public/`
+  (and `dist/` and `--marks`' `.cache/site/`, all gitignored) only, never
+  committed. Putting them on a public page is the user's go, asked
   before any deploy.
 - **No deploy, no GitHub repository, no domain, no push** without the user's
   go, asked in the session that wants it.

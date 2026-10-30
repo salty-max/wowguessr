@@ -1,0 +1,195 @@
+@import "tailwindcss";
+@import "@fontsource/cinzel/500.css";
+@import "@fontsource/cinzel/700.css";
+@import "@fontsource/cinzel/900.css";
+@import "@fontsource-variable/inter";
+
+/* The game's look, after Classic's own interface (dark leather and stone,
+   gold trim, red buttons, the tooltip's ink, parchment), drawn in CSS: no
+   texture of the game's but its maps. */
+@theme {
+  --font-display: "Cinzel", "Trajan Pro", Georgia, serif;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink-950: #0a0705;
+  --color-ink-900: #120d09;
+  --color-ink-800: #1b140e;
+  --color-ink-700: #271d14;
+  --color-ink-600: #36291c;
+  --color-ink-500: #4a3926;
+
+  --color-gold-200: #f8e7b0;
+  --color-gold-300: #f0d48a;
+  --color-gold-400: #e2bb5e;
+  --color-gold-500: #c79a3c;
+  --color-gold-600: #9a7429;
+  --color-gold-700: #6a4f1c;
+  --color-wow: #ffd100;
+
+  --color-parch-100: #f3e8cf;
+  --color-parch-200: #e8d8b4;
+  --color-parch-300: #d6bf8f;
+  --color-parch-700: #6b4f2a;
+  --color-parch-900: #33230f;
+
+  --color-guess: #59b4ff;
+  --color-truth: #ff4b3a;
+
+  --animate-pulse-ring: pulse-ring 1.6s ease-out infinite;
+  @keyframes pulse-ring {
+    0% {
+      transform: translate(-50%, -50%) scale(0.6);
+      opacity: 0.9;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(2.4);
+      opacity: 0;
+    }
+  }
+  --animate-fade: fade 0.6s ease-out both;
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+  --animate-grow: grow 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  @keyframes grow {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  --animate-rise: rise 0.35s ease-out both;
+  @keyframes rise {
+    from {
+      transform: translateY(8px);
+      opacity: 0;
+    }
+  }
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-ink-950 font-sans text-parch-100 antialiased;
+    background-image:
+      radial-gradient(ellipse at 50% -10%, rgb(120 84 36 / 0.22), transparent 60%),
+      radial-gradient(ellipse at 50% 120%, rgb(0 0 0 / 0.8), transparent 60%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: default;
+  }
+}
+
+@layer components {
+  /* gold trim around a dark panel, a gem at each corner (Frame) */
+  .frame {
+    @apply relative rounded-[3px] p-[3px];
+    background:
+      linear-gradient(var(--color-ink-900), var(--color-ink-900)) padding-box,
+      linear-gradient(
+          135deg,
+          var(--color-gold-300),
+          var(--color-gold-700) 30%,
+          var(--color-gold-400) 50%,
+          var(--color-gold-700) 72%,
+          var(--color-gold-300)
+        )
+        border-box;
+    border: 2px solid transparent;
+    box-shadow:
+      0 0 0 1px #000,
+      0 18px 50px -12px rgb(0 0 0 / 0.85),
+      inset 0 0 0 1px rgb(0 0 0 / 0.9);
+  }
+  .gem {
+    @apply pointer-events-none absolute z-10 size-3 rotate-45 border border-black;
+    background: radial-gradient(
+      circle at 35% 35%,
+      var(--color-gold-200),
+      var(--color-gold-500) 55%,
+      var(--color-gold-700)
+    );
+    box-shadow: 0 0 6px rgb(0 0 0 / 0.8);
+  }
+
+  /* the game's red panel button */
+  .btn-red {
+    @apply relative inline-flex items-center justify-center gap-2 rounded-[4px] px-6 py-2.5 font-display text-sm font-bold tracking-[0.12em] text-gold-200 uppercase transition;
+    background: linear-gradient(#a8251a, #6e110a 55%, #4f0b06);
+    border: 1px solid var(--color-gold-500);
+    box-shadow:
+      inset 0 1px 0 rgb(255 200 150 / 0.35),
+      inset 0 -2px 0 rgb(0 0 0 / 0.4),
+      0 0 0 1px #000,
+      0 4px 12px rgb(0 0 0 / 0.5);
+    text-shadow: 0 1px 2px #000;
+  }
+  .btn-red:hover:not(:disabled) {
+    background: linear-gradient(#c3332a, #86170f 55%, #5d0d07);
+    @apply text-wow;
+  }
+  .btn-red:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .btn-red:disabled {
+    @apply text-parch-300/50;
+    background: linear-gradient(#4a3a32, #2a201b);
+    border-color: var(--color-gold-700);
+  }
+
+  /* a small dark button with a gold rim (zoom, back, the picture's enlarge) */
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-[3px] border border-gold-700 bg-ink-900/85 text-gold-300 transition hover:border-gold-400 hover:text-gold-200;
+    box-shadow:
+      0 0 0 1px #000,
+      inset 0 1px 0 rgb(255 220 150 / 0.08);
+  }
+
+  /* the game's tooltip */
+  .tooltip {
+    @apply rounded-[4px] border border-[#8a92a8]/70 px-2.5 py-1 text-[13px] text-white;
+    background: rgb(6 6 18 / 0.92);
+    box-shadow: 0 4px 14px rgb(0 0 0 / 0.6);
+  }
+
+  /* parchment for the intro and the summary */
+  .parchment {
+    @apply relative rounded-[3px] text-parch-900;
+    background:
+      radial-gradient(ellipse at center, transparent 55%, rgb(110 70 20 / 0.35)),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.6' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .22 0 0 0 0 .08 0 0 0 .18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      linear-gradient(var(--color-parch-100), var(--color-parch-200));
+    box-shadow:
+      0 0 0 1px #000,
+      0 0 0 3px var(--color-gold-600),
+      0 0 0 4px #000,
+      0 30px 80px -20px rgb(0 0 0 / 0.9);
+  }
+
+  /* a rule with a diamond in its middle */
+  .rule {
+    @apply relative my-5 h-px;
+    background: linear-gradient(90deg, transparent, currentColor 20%, currentColor 80%, transparent);
+  }
+  .rule::after {
+    content: "";
+    @apply absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rotate-45;
+    background: currentColor;
+  }
+
+  .gold-text {
+    background: linear-gradient(180deg, var(--color-gold-200), var(--color-gold-400) 55%, var(--color-gold-600));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.8));
+  }
+}

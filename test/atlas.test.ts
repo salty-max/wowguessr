@@ -2,7 +2,7 @@
 // picture and back, the areas under a guess, the score, the rounds drawn.
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { type Atlas, areaAt, distancePoints, type Frame, judge, onFrame, pickRounds, type Round, ROUND_MAX, toPixel, toWorld, zoneUnder } from "../src/atlas";
+import { type Atlas, areaAt, distancePoints, type Frame, judge, onFrame, pickRounds, rank, revealMap, type Round, ROUND_MAX, toPixel, toWorld, zoneUnder } from "../src/atlas";
 import { areaRuns } from "../src/areas";
 import { CHUNK, type ChunkRow, Ground, ORIGIN } from "../src/ground";
 
@@ -122,5 +122,40 @@ describe("the areas under a map (src/areas.ts)", () => {
     expect(areaAt(a, ...mid(101, 203))).toBe(0);
     expect(areaAt(a, ...mid(100, 201))).toBe(0);
     expect(areaAt(a, ...mid(102, 201))).toBe(0);
+  });
+});
+
+describe("the map a reveal shows", () => {
+  // a zone of 40 by 40 yards, a city of 8 by 8 inside it, and the continent around both
+  const zoneFrame: Frame = { map: 0, top: 4000, left: 2000, yards: 1, width: 40, height: 40 };
+  const cityFrame: Frame = { map: 0, top: 3990, left: 1990, yards: 1, width: 8, height: 8 };
+  const world: Atlas = {
+    ...atlas,
+    zones: [
+      { ui: 1, zone: 12, name: "Zone", frame: zoneFrame, inside: [2] },
+      { ui: 2, zone: 1537, name: "City", frame: cityFrame, inside: [] },
+    ],
+  };
+  const round = (zone: number, x: number, y: number): Round => ({ id: 1, map: 0, x, y, zone, mapZone: zone, subzone: zone, mapArea: zone, name: "", zoneName: "" });
+  test("the round's zone map when it holds both", () => {
+    expect(revealMap(world, round(12, 3980, 1980), { map: 0, x: 3970, y: 1970, ui: 1 })).toBe(1);
+  });
+  test("a city's round with the guess outside the city: the zone around it", () => {
+    expect(revealMap(world, round(1537, 3987, 1987), { map: 0, x: 3970, y: 1970, ui: 1 })).toBe(1);
+  });
+  test("nothing holds both: the continent", () => {
+    expect(revealMap(world, round(12, 3980, 1980), { map: 0, x: 1000, y: 1000, ui: 1 })).toBeNull();
+  });
+  test("the other continent: the round's zone, the truth alone", () => {
+    expect(revealMap(world, round(12, 3980, 1980), { map: 1, x: 0, y: 0, ui: 9 })).toBe(1);
+    expect(revealMap(world, round(12, 3980, 1980), null)).toBe(1);
+  });
+});
+
+describe("a game's title", () => {
+  test("by its share of the most a game can score", () => {
+    expect(rank(30000, 5)).toBe("Loremaster");
+    expect(rank(14399, 5)).toBe("Wayfarer");
+    expect(rank(0, 5)).toBe("Lost in the Barrens");
   });
 });

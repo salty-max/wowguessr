@@ -1,10 +1,49 @@
 # The game page (step 5, 30 October 2026)
 
 `bun run dev` (the family's `geoguessr-game` launch entry, port 4195):
-`scripts/site.ts` builds `site/`, `scripts/serve.ts` serves it on this
-computer. Local only: no deploy, no domain. `site/` is never committed: the
-pictures are the renders', the maps the game's own art, both rebuilt from
-here.
+`scripts/site.ts` writes the data into `web/public/`, then Vite serves the
+app on this computer. Local only: no deploy, no domain. The data is never
+committed: the pictures are the renders', the maps the game's own art, both
+rebuilt from here.
+
+## The app (`web/`, 30 October 2026)
+
+Vite 8, React 19, TypeScript, Tailwind 4, the fonts self-hosted through
+fontsource (Cinzel, Inter: hearthtale.app's), lucide's icons, at
+hearthtale's versions. ESLint (typescript-eslint, React's hooks and compiler
+rules) and Prettier (with Tailwind's class order) on `web/`, the shared
+`src/atlas.ts` and the configs. The scripts keep their own style.
+`bun run check` runs both tsc projects (`tsconfig.json` for the scripts and
+tests, `web/tsconfig.json` for the app), ESLint without a warning, Prettier's
+check and the tests. `bun run build` writes `dist/` (gitignored).
+
+- `web/src/App.tsx`: the phases (intro, play, summary), the keys (Enter or
+  Space guesses, then moves on, F shows the picture whole, Esc closes it,
+  nothing else while it is open). The map is remounted each round, so a
+  round opens fitted whatever the last reveal showed.
+- `web/src/game.ts`: a game's state as a reducer (the rounds, the one at
+  hand, the map on show, the guess, the results). The rules stay in
+  `src/atlas.ts` (judge, revealMap, rank), tested there.
+- `web/src/hooks/usePanZoom.ts`: a picture in a box, fitted when its map
+  changes, scaled with the box when it resizes (the dock growing keeps the
+  zoom), zoomed about a point, panned, never pulled off the box.
+- `web/src/components/`: the header (the title, a pip a round, filled by its
+  score, the score counting up), the picture (the whole scene behind the map
+  on a wide screen, framed above it on a narrow one, whole on F), the map
+  (tabs, the zone bar, the game's tooltip naming the zone or area under the
+  pointer, the pins, the line), the result (the place, the distance, a bar
+  and a chip for each part of the points), the intro and the summary on
+  parchment over a blurred render (the summary's title by the share of the
+  points: Loremaster, Seasoned Explorer, Wayfarer, Greenhorn, Lost in the
+  Barrens).
+
+The look is Classic's own interface drawn in CSS (`web/src/styles.css`):
+dark leather, gold trim with a gem at each corner, the red panel button, the
+tooltip's ink, parchment. No interface texture of the game's: only its maps.
+
+On a wide screen the picture fills the page and the map is docked bottom
+right, 400 pixels until hovered (760), 1000 for the reveal. On a narrow one
+(a phone) the picture sits framed above the map.
 
 ## A game
 
@@ -19,7 +58,8 @@ picture was, a line from the guess, the distance in yards, the points and
 the place's name (the subzone's, then the zone's), on the round's zone map
 or another map holding both (a city's zone, the map the guess was placed
 on), else on the continent. A summary after the fifth:
-each picture, its place, the distance, the points, out of 30,000.
+each picture, its place, the distance, the points, out of 30,000, and a
+title.
 
 ## The score (`src/atlas.ts`, `judge`)
 
@@ -55,7 +95,7 @@ cuts it (MapExplorationDataProvider's SetTexCoord: most overlays aren't
 whole tiles, and the tiles' padding holds faint smudges), about 4 seconds a
 continent.
 
-They are Blizzard's art: only in `site/` and `--marks`' `.cache/site/` (both gitignored), never committed.
+They are Blizzard's art: only in `web/public/maps/`, `dist/` and `--marks`' `.cache/site/` (all gitignored), never committed.
 Shipping them on a public page is a separate question for the user (the
 hard rule in CLAUDE.md says so).
 
@@ -95,7 +135,7 @@ Silverpine, the Wetlands and Desolace).
 ## The pictures
 
 `--pictures` (default `.cache/review3/webp`, the 1024x576 WebPs the user
-passed by eye on 30 October 2026) copied to `site/pictures/<id>.webp`. A
+passed by eye on 30 October 2026) copied to `web/public/pictures/<id>.webp`. A
 camera with no picture refuses the build. Rendered pictures only, nothing of
 the client's.
 
@@ -109,3 +149,12 @@ wide) stacks the picture over a 3:2 map box, no sideways scroll.
 
 The first five, on the maps drawn from the terrain: Hammerfall, Shadowprey
 Village, Talrendis Point, Warsong Lumber Camp, Freewind Post, 14,399.
+
+## Five rounds in the React app (30 October 2026)
+
+Mannoroc Coven (148 yards, both bonuses, 5875), Agamand Mills (599 yards,
+right zone, 4805), the Dawning Isles (guessed in Ashenvale, the other
+continent, 0), the Swamp of Sorrows (9 yards, 6000), Camp Taurajo (1136
+yards, the pin on Mulgore's side of the hills, 3626): 20,306, Wayfarer.
+Each truth on its own label of the zone's map. The phone (375 wide): the
+picture over the map, the header on one line, no sideways scroll.

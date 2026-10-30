@@ -23,7 +23,8 @@ export const toWorld = (f: Frame, px: number, py: number) => ({ x: f.top - py * 
 export type Areas = { row0: number; col0: number; runs: number[][] };
 
 export function areaAt(a: Areas, x: number, y: number): number {
-  const r = Math.floor((ORIGIN - x) / CHUNK) - a.row0, c = Math.floor((ORIGIN - y) / CHUNK) - a.col0;
+  const r = Math.floor((ORIGIN - x) / CHUNK) - a.row0,
+    c = Math.floor((ORIGIN - y) / CHUNK) - a.col0;
   const runs = a.runs[r];
   if (!runs || c < 0) return 0;
   for (let i = 0, at = 0; i < runs.length; i += 2) {
@@ -51,7 +52,8 @@ export type Atlas = {
 // the zone's map a click on the continent opens: the zone under it (a city's
 // own when the ground is the city's, Stormwind's), none in the sea
 export function zoneUnder(atlas: Atlas, x: number, y: number): ZoneMap | undefined {
-  const area = areaAt(atlas.areas, x, y), zone = atlas.names[area]?.zone;
+  const area = areaAt(atlas.areas, x, y),
+    zone = atlas.names[area]?.zone;
   return zone ? atlas.zones.find((z) => z.zone === zone) : undefined;
 }
 // true when a world point lies on a frame's picture
@@ -67,7 +69,18 @@ export function onFrame(f: Frame, x: number, y: number): boolean {
 // Morogh's, Undercity's Tirisfal's) and on a border (Thalanaar). mapArea:
 // the area the map names under the camera (a subzone, or the zone's own
 // unnamed ground).
-export type Round = { id: number; map: number; x: number; y: number; zone: number; mapZone: number; subzone: number; mapArea: number; name: string; zoneName: string };
+export type Round = {
+  id: number;
+  map: number;
+  x: number;
+  y: number;
+  zone: number;
+  mapZone: number;
+  subzone: number;
+  mapArea: number;
+  name: string;
+  zoneName: string;
+};
 
 // The score (ideas/geoguessr.md, "How a guess is scored"): a falloff of the
 // distance, 5000 under 50 yards to 0 at 4000 (about a fifth of a continent),
@@ -77,7 +90,11 @@ export type Round = { id: number; map: number; x: number; y: number; zone: numbe
 // a city's district over another zone's chunks, has no subzone of its own),
 // exact from the areas under the guess. A guess on the other continent
 // scores nothing.
-export const MAX_DISTANCE = 4000, NEAR = 50, FULL = 5000, ZONE_BONUS = 500, SUBZONE_BONUS = 500;
+export const MAX_DISTANCE = 4000,
+  NEAR = 50,
+  FULL = 5000,
+  ZONE_BONUS = 500,
+  SUBZONE_BONUS = 500;
 export const ROUND_MAX = FULL + ZONE_BONUS + SUBZONE_BONUS;
 
 export function distancePoints(yards: number): number {
@@ -94,18 +111,35 @@ function within(atlas: Atlas, area: number, subzone: number): boolean {
   return false;
 }
 
-export type Result = { yards: number | null; distance: number; zone: boolean; subzone: boolean; points: number; guessArea: number };
+export type Result = {
+  yards: number | null;
+  distance: number;
+  zone: boolean;
+  subzone: boolean;
+  points: number;
+  guessArea: number;
+};
 
 // the guess (a map and a world point) against the round's truth; atlas is
 // the guessed continent's
 export function judge(atlas: Atlas, round: Round, guess: { map: number; x: number; y: number }): Result {
-  if (guess.map !== round.map) return { yards: null, distance: 0, zone: false, subzone: false, points: 0, guessArea: 0 };
+  if (guess.map !== round.map)
+    return { yards: null, distance: 0, zone: false, subzone: false, points: 0, guessArea: 0 };
   const yards = Math.hypot(guess.x - round.x, guess.y - round.y);
   const area = areaAt(atlas.areas, guess.x, guess.y);
-  const guessed = zoneOf(atlas, area), zone = guessed !== 0 && (guessed === round.zone || guessed === round.mapZone);
-  const subzone = zone && ((round.subzone !== round.zone && within(atlas, area, round.subzone)) || area === round.mapArea);
+  const guessed = zoneOf(atlas, area),
+    zone = guessed !== 0 && (guessed === round.zone || guessed === round.mapZone);
+  const subzone =
+    zone && ((round.subzone !== round.zone && within(atlas, area, round.subzone)) || area === round.mapArea);
   const distance = distancePoints(yards);
-  return { yards, distance, zone, subzone, points: distance + (zone ? ZONE_BONUS : 0) + (subzone ? SUBZONE_BONUS : 0), guessArea: area };
+  return {
+    yards,
+    distance,
+    zone,
+    subzone,
+    points: distance + (zone ? ZONE_BONUS : 0) + (subzone ? SUBZONE_BONUS : 0),
+    guessArea: area,
+  };
 }
 
 // A game's rounds: n pictures, each from another zone, so five rounds walk
@@ -116,7 +150,40 @@ export function pickRounds(all: Round[], n: number, random: () => number = Math.
     const j = Math.floor(random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  const out: Round[] = [], zones = new Set<number>();
-  for (const r of pool) if (out.length < n && !zones.has(r.zone)) out.push(r), zones.add(r.zone);
+  const out: Round[] = [],
+    zones = new Set<number>();
+  for (const r of pool)
+    if (out.length < n && !zones.has(r.zone)) {
+      out.push(r);
+      zones.add(r.zone);
+    }
   return out;
+}
+
+// A guess: a world point on a continent, and the zone's map it was placed on
+export type Guess = { map: number; x: number; y: number; ui: number };
+
+// the zone whose map opens a city's (Ironforge's: Dun Morogh's)
+export const parentOf = (atlas: Atlas, ui: number) => atlas.zones.find((z) => z.inside.includes(ui));
+
+// The map a reveal shows: the first holding the guess and the truth (the
+// round's zone, the zone around it when it is a city, the map the guess was
+// placed on), else the continent (null); a guess on the other continent: the
+// round's zone, the truth alone
+export function revealMap(atlas: Atlas, round: Round, guess: Guess | null): number | null {
+  const own = atlas.zones.find((z) => z.zone === round.zone);
+  if (!guess || guess.map !== round.map) return own?.ui ?? null;
+  const tries = [own, own && parentOf(atlas, own.ui), atlas.zones.find((z) => z.ui === guess.ui)];
+  const both = tries.find((z) => z && onFrame(z.frame, round.x, round.y) && onFrame(z.frame, guess.x, guess.y));
+  return both?.ui ?? null;
+}
+
+// a game's title by its score, out of ROUND_MAX a round
+export function rank(points: number, rounds: number): string {
+  const share = points / (ROUND_MAX * rounds);
+  if (share >= 0.9) return "Loremaster";
+  if (share >= 0.7) return "Seasoned Explorer";
+  if (share >= 0.45) return "Wayfarer";
+  if (share >= 0.2) return "Greenhorn";
+  return "Lost in the Barrens";
 }
