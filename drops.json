@@ -835,10 +835,5 @@
    "by": "draft"
   }
  ],
- "empty": [
-  {
-   "zone": "Un'Goro Crater",
-   "why": "its two landmarks, both at Fire Plume Ridge, render as nothing to guess from, and it has no other WMO standing on open ground (Marshal's Refuge is a cave, its box under the hill). Its places are terrain and doodads (crystals, the tar pits), and wow-data has no model names to tell a crystal from a tree. The crystal pylons are game objects, which the renderer does not draw."
-  }
- ]
+ "empty": []
 }

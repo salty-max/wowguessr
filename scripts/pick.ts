@@ -13,8 +13,9 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import type { Database } from "bun:sqlite";
 import { familyPath } from "../src/family";
-import { type ChunkRow, type DoodadRow, Doodads, Ground, type WmoRow, Wmos } from "../src/ground";
+import { CHUNK, type ChunkRow, type DoodadRow, Doodads, Ground, type WmoRow, Wmos } from "../src/ground";
 import { districts, EYE, type Group, type Placed } from "../src/cities";
+import { type Extra, extraLandmark, type Lookup, place as placeExtra } from "../src/extras";
 import { camps, type Spot, spotLandmarks } from "../src/spots";
 import type { Vec } from "../src/frame";
 import { choose, type Landmark, type Limits, landmarks, named, STRICT, type Viewpoint, viewpoint, WIDE, type World } from "../src/landmarks";
@@ -184,6 +185,64 @@ for (const d of districts(groups, points, allGroups)) {
   });
 }
 
+// the user's own (src/extra-landmarks.json, src/extras.ts): found by
+// wow-data's card resolver, a camera as on a camp (WIDE's when the strict
+// rules find none), ahead of everything else of its zone and name
+const { resolve } = (await import(familyPath("wow-data", "src", "card.ts"))) as { resolve: (d: Database, kind: string, key: string) => { id: number; others: number[] } | null };
+const extras = (JSON.parse(readFileSync(new URL("../src/extra-landmarks.json", import.meta.url), "utf8")) as { landmarks: Extra[] }).landmarks;
+const zoneByName = new Map([...zones].map((z) => [name(z).toLowerCase(), z]));
+// (the creatures by the area under them, read once and only when asked)
+let byArea: Map<number, { map: number; x: number; y: number; zone: number }[]> | null = null;
+const creaturesByArea = () => {
+  if (byArea) return byArea;
+  byArea = new Map();
+  for (const map of MAPS)
+    for (const p of db.query("SELECT x, y FROM spawn WHERE kind = 'creature' AND map_id = ? AND x IS NOT NULL ORDER BY x, y").all(map) as { x: number; y: number }[]) {
+      const area = grounds.get(map)!.area(p.x, p.y);
+      if (area) (byArea.get(area) ?? byArea.set(area, []).get(area)!).push({ map, x: p.x, y: p.y, zone: zoneOf(area) });
+    }
+  return byArea;
+};
+const look: Lookup = {
+  zoneId: (n) => zoneByName.get(n.toLowerCase()) ?? null,
+  resolve: (kind, n) => {
+    const r = resolve(db, kind, n);
+    return r ? [r.id, ...r.others] : [];
+  },
+  areaGround: (area) =>
+    MAPS.flatMap((map) => [...grounds.get(map)!.all].filter((c) => c.area_id === area).map((c) => ({ map, x: c.x - CHUNK / 2, y: c.y - CHUNK / 2, top: c.z_max, zone: zoneOf(area) }))),
+  areaCreatures: (area) => creaturesByArea().get(area) ?? [],
+  spawns: (kind, id) =>
+    (db.query("SELECT map_id map, x, y FROM spawn WHERE kind = ? AND entity_id = ? AND map_id IN (0, 1) AND x IS NOT NULL ORDER BY spawn_id").all(kind === "npc" ? "creature" : "object", id) as { map: number; x: number; y: number }[]).map((p) => ({
+      ...p,
+      zone: zoneOf(grounds.get(p.map)!.area(p.x, p.y) ?? 0),
+    })),
+};
+const extraReport: { name: string; zone: string; placed: boolean; why?: string }[] = [];
+// (a listed entry's key to its zone: one dropped still counts its zone)
+const extraZone = new Map<string, number>();
+for (const e of extras) {
+  const p = placeExtra(e, look);
+  if ("why" in p) {
+    extraReport.push({ name: e.name, zone: e.zone, placed: false, why: p.why });
+    continue;
+  }
+  const world = worlds.get(p.map)!;
+  const l = extraLandmark(p, world.ground, world.leaves, zoneOf, STRICT);
+  const asked = look.zoneId(e.zone)!;
+  if (l) extraZone.set(`${p.map}:${l.box.unique_id}`, asked);
+  // (its ground in the zone asked: a point on a neighbour's is refused)
+  const why = !l ? "off the map" : zoneOf(l.area) !== asked ? `it stands in ${name(zoneOf(l.area))}` : dropped.has(`${p.map}:${l.box.unique_id}`) ? "dropped" : null;
+  const strictView = l && !why ? viewpoint(l, world) : null;
+  const v = strictView ?? (l && !why ? viewpoint(l, world, WIDE) : null);
+  if (!l || !v) {
+    extraReport.push({ name: e.name, zone: e.zone, placed: false, why: why ?? "seen from nowhere" });
+    continue;
+  }
+  found.push({ landmark: l, view: { ...v, score: v.score + 1 }, zone: asked, widened: !strictView });
+  extraReport.push({ name: e.name, zone: e.zone, placed: true });
+}
+
 // each zone's share by the square root of its size in map chunks, between
 // MIN (as many as it has) and CAP; a zone counts when it has a landmark
 // seen or a dropped one, so a drop list that empties one shows as a 0
@@ -194,7 +253,7 @@ for (const [, ground] of grounds) for (const c of ground.all) {
 }
 const have = new Set(found.map((f) => f.zone));
 for (const d of drops) {
-  const city = districtZone.get(`${d.map}:${d.wmo}`);
+  const city = districtZone.get(`${d.map}:${d.wmo}`) ?? extraZone.get(`${d.map}:${d.wmo}`);
   if (city) have.add(city);
   const w = rowsOf.get(d.map)?.find((r) => r.unique_id === d.wmo);
   const area = w && grounds.get(d.map)!.area((w.min_x + w.max_x) / 2, (w.min_y + w.max_y) / 2);
@@ -295,6 +354,7 @@ writeFileSync(
       landmarks: tried,
       unseen,
       dropped: drops.length,
+      extras: extraReport,
       perZone,
       share: Object.fromEntries([...want].map(([z, n]) => [name(z), n])),
       nextId,

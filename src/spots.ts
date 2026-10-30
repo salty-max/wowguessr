@@ -12,7 +12,8 @@ import { type Landmark, type Limits, STRICT } from "./landmarks";
 // id: the database's own (a camp's seed spawn's spawn_id, a flight master's
 // TaxiNodes ID, a graveyard's id): its key stays while the data does
 export type Spot = { map: number; x: number; y: number; kind: string; id: number };
-export const KINDS = ["camp", "flight master", "graveyard"];
+// (listed: the user's own, src/extras.ts)
+export const KINDS = ["camp", "flight master", "graveyard", "listed"];
 // a spot's key in drops.json and locations.json's wmo: negative, from its
 // kind and its database id, apart from the districts' (under 600 million)
 export const spotKey = (s: Spot) => -((2 + KINDS.indexOf(s.kind)) * 1e9 + s.id);

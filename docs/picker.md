@@ -132,6 +132,38 @@ graveyards, a flight master (the others stand in towns a building already
 names). Short of the 350 to 450 asked, and some zones still thin: Un'Goro 0,
 Thunder Bluff 1, Darnassus 2, the Swamp of Sorrows and Deadwind Pass 3.
 
+## The user's own (`src/extra-landmarks.json`, `src/extras.ts`)
+
+A list for the user to fill: `{ name, zone, kind?, hint? }`, the game's
+English names. Each is found in wow-data by its card's resolver
+(`wow-data/src/card.ts`' `resolve`: an area, a creature or an object by its
+exact name, every one of that name tried, the zone telling them apart: 150
+area names are used twice; `kind` picks one, else place, then npc, then
+object) and placed where the game has it, in the zone named: an area where
+its creatures gather most (3 within 20 yards: Marshal's Refuge is its camp),
+else its own chunk nearest its middle (a crescent's average lies on someone
+else's ground); a `peak` at its area's highest ground (a volcano, a
+mountain); a creature or an object at its spawn nearest the middle of the
+zone's ones. A landmark whose ground turns out to be another zone's is
+refused.
+Then a camera on it as on a camp (the doodads around it), or on the ground
+itself (30 yards across, 20 high; a peak 80 across, from 40 under its top,
+seen whole), strict then `WIDE`'s camera (`widened` when only `WIDE`'s
+found one), scored a point over everything
+else so its name wins. Its key: -(5e9 + a hash of its zone and name), so
+the list can be reordered. locations.json's `extras` says for each entry
+whether it was placed, and why not (`no zone named ...`, `no place, creature
+or object named ...`, `... is nowhere in ...`, `it stands in ...`, `seen
+from nowhere`, `dropped`). A dropped entry still counts its zone (a 0 the
+empty-zone test sees). Never copied from
+another site's list (where-in-wow is AGPL: a design reference only).
+
+The three tried (30 October 2026): Fire Plume Ridge as a peak (the volcano,
+its lava streak, in Un'Goro's white haze), Marshal's Refuge (placed at its
+people's camp, but the render shows the rocks of the cave mouth, not the
+camp in it), Itharius the green dragon (in his cave: seen from nowhere,
+told in `extras`).
+
 ## The viewpoint (`viewpoint`)
 
 16 bearings, 4 distances (12, 30, 55 and 80 yards beyond the box's corners,

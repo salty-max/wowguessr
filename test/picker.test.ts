@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { apart, CHUNK, type ChunkRow, type DoodadRow, Doodads, Ground, ORIGIN, solid, UNIT, type WmoRow, Wmos } from "../src/ground";
 import { boxShare, project, rayBox, rayGround, raySolid, shoot } from "../src/frame";
 import { districts, type Group, type Placed } from "../src/cities";
+import { extraId, type Lookup, place as placeExtra } from "../src/extras";
 import { camps, spotKey, spotLandmark, spotLandmarks } from "../src/spots";
 import { choose, clear, landmarks, viewpoint, WIDE, type World } from "../src/landmarks";
 import { type Candidate, quotas, random, shuffle, stand } from "../src/pick";
@@ -314,6 +315,68 @@ describe("the spots: camps, flight masters, graveyards", () => {
     // the same tents as a building's surroundings would block every heading at eye level
     expect(clear(mx - 10, my, 53, 0, world, l.box, 60, false)).toBe(false);
     expect(clear(mx - 10, my, 53, 0, world, l.box, 60, true)).toBe(true);
+  });
+});
+
+describe("the user's own landmarks", () => {
+  // a zone (490) with an area (537): its ground, a gathering of 3 creatures
+  // in one corner, a creature (11) standing twice
+  const look: Lookup = {
+    zoneId: (n) => (n.toLowerCase() === "un'goro crater" ? 490 : null),
+    // (a second Fire Plume Ridge, 900, elsewhere: wow-data names it first)
+    resolve: (kind, n) => (kind === "place" && n === "Fire Plume Ridge" ? [900, 537] : kind === "npc" && n === "Ringo" ? [11] : kind === "place" && n === "Crescent" ? [538] : []),
+    areaGround: (a) =>
+      a === 537
+        ? [
+            { map: 1, x: 0, y: 0, top: 10, zone: 490 },
+            { map: 1, x: 100, y: 0, top: 90, zone: 490 },
+            { map: 1, x: 0, y: 100, top: 20, zone: 490 },
+          ]
+        : a === 538
+          ? [
+              { map: 1, x: 0, y: 0, top: 0, zone: 490 },
+              { map: 1, x: 100, y: 100, top: 0, zone: 490 },
+              { map: 1, x: 0, y: 200, top: 0, zone: 490 },
+            ]
+          : [{ map: 0, x: 5000, y: 5000, top: 0, zone: 4 }],
+    areaCreatures: (a) => a !== 537 ? [] : [
+      { map: 1, x: 80, y: 80, zone: 490 },
+      { map: 1, x: 85, y: 80, zone: 490 },
+      { map: 1, x: 80, y: 85, zone: 490 },
+      { map: 1, x: 0, y: 0, zone: 490 },
+    ],
+    spawns: () => [
+      { map: 1, x: 40, y: 30, zone: 490 },
+      { map: 1, x: 50, y: 40, zone: 490 },
+      { map: 1, x: 45, y: 35, zone: 490 },
+      { map: 1, x: 300, y: 300, zone: 1 },
+    ],
+  };
+  test("an area at its creatures' gathering, a peak at its top, a creature at its spawn nearest the middle of its zone's", () => {
+    expect(placeExtra({ name: "Fire Plume Ridge", zone: "Un'Goro Crater" }, look)).toMatchObject({ map: 1, x: 80, y: 80 });
+    expect(placeExtra({ name: "Fire Plume Ridge", zone: "Un'Goro Crater", kind: "peak" }, look)).toMatchObject({ x: 100, y: 0, top: 90 });
+    // a crescent's middle (33, 100) is no ground of its own: its chunk nearest it is
+    expect(placeExtra({ name: "Crescent", zone: "Un'Goro Crater" }, look)).toMatchObject({ x: 100, y: 100 });
+    expect(placeExtra({ name: "Ringo", zone: "Un'Goro Crater" }, look)).toMatchObject({ x: 45, y: 35 });
+  });
+  test("an unknown zone or name is told, not guessed; its key survives a reorder and case", () => {
+    expect(placeExtra({ name: "Ringo", zone: "Atlantis" }, look)).toEqual({ extra: { name: "Ringo", zone: "Atlantis" }, why: "no zone named Atlantis" });
+    expect("why" in placeExtra({ name: "Nobody", zone: "Un'Goro Crater" }, look)).toBe(true);
+    // a name the game has, not in that zone
+    expect(placeExtra({ name: "Ringo", zone: "Un'Goro Crater", kind: "place" }, look)).toMatchObject({ why: "no place, creature or object named Ringo in Un'Goro Crater" });
+    expect(placeExtra({ name: "Fire Plume Ridge", zone: "Un'Goro Crater", kind: "npc" }, look)).toMatchObject({ why: expect.stringContaining("no place") });
+    expect(extraId({ name: "Ringo", zone: "Un'Goro Crater" })).toBe(extraId({ name: "ringo", zone: "UN'GORO CRATER", hint: "x" }));
+    expect(extraId({ name: "Ringo", zone: "Un'Goro Crater" })).not.toBe(extraId({ name: "Marshal's Refuge", zone: "Un'Goro Crater" }));
+  });
+  test("the list itself: names and zones, every one placed or told why", async () => {
+    const list = JSON.parse(await Bun.file(new URL("../src/extra-landmarks.json", import.meta.url)).text());
+    for (const e of list.landmarks) {
+      expect(typeof e.name).toBe("string");
+      expect(typeof e.zone).toBe("string");
+    }
+    const report = JSON.parse(await Bun.file(new URL("../locations.json", import.meta.url)).text()).extras as { name: string; placed: boolean; why?: string }[];
+    expect(report.map((r) => r.name)).toEqual(list.landmarks.map((e: { name: string }) => e.name));
+    for (const r of report) expect(r.placed || !!r.why).toBe(true);
   });
 });
 

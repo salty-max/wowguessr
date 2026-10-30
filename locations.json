@@ -6,6 +6,24 @@
  "landmarks": 1248,
  "unseen": 506,
  "dropped": 119,
+ "extras": [
+  {
+   "name": "Fire Plume Ridge",
+   "zone": "Un'Goro Crater",
+   "placed": true
+  },
+  {
+   "name": "Marshal's Refuge",
+   "zone": "Un'Goro Crater",
+   "placed": true
+  },
+  {
+   "name": "Itharius",
+   "zone": "Swamp of Sorrows",
+   "placed": false,
+   "why": "seen from nowhere"
+  }
+ ],
  "perZone": {
   "Dun Morogh": 9,
   "Badlands": 5,
@@ -42,7 +60,7 @@
   "Desolace": 12,
   "Stonetalon Mountains": 9,
   "Tanaris": 8,
-  "Un'Goro Crater": 0,
+  "Un'Goro Crater": 2,
   "Moonglade": 4,
   "Winterspring": 7,
   "Silithus": 9,
@@ -102,7 +120,7 @@
   "Teldrassil": 6,
   "Thunder Bluff": 6
  },
- "nextId": 669,
+ "nextId": 671,
  "locations": [
   {
    "id": 2,
@@ -7827,6 +7845,52 @@
    "fill": 0.17,
    "sky": 0.23,
    "score": 1.01
+  },
+  {
+   "id": 669,
+   "map": 1,
+   "x": -6160.24,
+   "y": -1078.86,
+   "z": -199.17,
+   "yaw": 5.498,
+   "pitch": 0.302,
+   "lookAt": [
+    -6142.56,
+    -1096.53,
+    -191.38
+   ],
+   "ground": -202.17,
+   "zone": 490,
+   "subzone": 541,
+   "name": "Marshal's Refuge",
+   "kind": "listed",
+   "wmo": -5338995316,
+   "fill": 0.15,
+   "sky": 0.08,
+   "score": 1.88
+  },
+  {
+   "id": 670,
+   "map": 1,
+   "x": -7328.24,
+   "y": -1316.67,
+   "z": -235.43,
+   "yaw": 0,
+   "pitch": 0.57,
+   "lookAt": [
+    -7216.67,
+    -1316.67,
+    -163.86
+   ],
+   "ground": -245.43,
+   "zone": 490,
+   "subzone": 537,
+   "name": "Fire Plume Ridge",
+   "kind": "listed",
+   "wmo": -5980760296,
+   "fill": 0.23,
+   "sky": 0.47,
+   "score": 1.9
   }
  ]
 }

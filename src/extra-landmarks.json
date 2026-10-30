@@ -1,0 +1,8 @@
+{
+ "about": "The user's own landmarks: a name a player knows and its zone, as the game names them (English). kind: place (an area: where its creatures gather most, else its middle), peak (an area seen as its highest ground: a volcano, a mountain), npc or object; without it, place, npc, then object. hint: a note for the reader (where, why), not read by the picker. scripts/pick.ts finds each in wow-data (its card's resolver), places it where the game has it and looks for a camera on it as on a camp (src/extras.ts). Never copied from another site's list.",
+ "landmarks": [
+  { "name": "Fire Plume Ridge", "zone": "Un'Goro Crater", "kind": "peak", "hint": "the volcano in the crater's middle" },
+  { "name": "Marshal's Refuge", "zone": "Un'Goro Crater", "kind": "place", "hint": "the camp in the cave mouth on the north wall" },
+  { "name": "Itharius", "zone": "Swamp of Sorrows", "kind": "npc", "hint": "the green dragon at his cave, south of Stonard" }
+ ]
+}
