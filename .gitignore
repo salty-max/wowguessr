@@ -2,3 +2,5 @@
 .harness/
 .cache/
 node_modules/
+# the game page's build (scripts/site.ts): rendered pictures and drawn maps
+site/

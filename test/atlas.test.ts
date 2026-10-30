@@ -1,0 +1,92 @@
+// The game page's arithmetic (src/atlas.ts): a world point to the map's
+// picture and back, the areas under a guess, the score, the rounds drawn.
+import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { type Atlas, areaAt, distancePoints, type Frame, judge, pickRounds, type Round, ROUND_MAX, toPixel, toWorld } from "../src/atlas";
+import { CHUNK, ORIGIN } from "../src/ground";
+
+const frame: Frame = { map: 0, top: 4000, left: 2000, yards: 8, width: 500, height: 1000 };
+
+describe("the map's frame", () => {
+  test("north is up and west is left", () => {
+    expect(toPixel(frame, 4000, 2000)).toEqual({ px: 0, py: 0 });
+    // 80 yards south and 40 east: 10 pixels down, 5 right
+    expect(toPixel(frame, 3920, 1960)).toEqual({ px: 5, py: 10 });
+  });
+  test("a point goes to the picture and back unchanged", () => {
+    for (const [x, y] of [[-909.37, -3478.05], [2734.45, -3854.49], [0, 0]]) {
+      const { px, py } = toPixel(frame, x, y), w = toWorld(frame, px, py);
+      expect(w.x).toBeCloseTo(x, 6);
+      expect(w.y).toBeCloseTo(y, 6);
+    }
+  });
+});
+
+// a continent of three chunks in a row: Elwynn's ground, Goldshire on it, then the sea
+const row0 = 100, col0 = 200;
+const atlas: Atlas = {
+  frame,
+  name: "Test",
+  areas: { row0, col0, runs: [[12, 1, 87, 1, 0, 1]] },
+  names: { 12: { name: "Elwynn Forest", zone: 12, parent: 0 }, 87: { name: "Goldshire", zone: 12, parent: 12 } },
+  labels: [],
+};
+// the middle of chunk k of the row
+const at = (k: number) => ({ x: ORIGIN - (row0 + 0.5) * CHUNK, y: ORIGIN - (col0 + k + 0.5) * CHUNK });
+
+describe("the areas", () => {
+  test("each chunk's area from its run", () => {
+    expect([0, 1, 2, 3].map((k) => areaAt(atlas.areas, at(k).x, at(k).y))).toEqual([12, 87, 0, 0]);
+    expect(areaAt(atlas.areas, at(0).x + CHUNK, at(0).y)).toBe(0); // the row above: none
+  });
+});
+
+describe("the score", () => {
+  test("full under 50 yards, nothing from 4000, falling between", () => {
+    expect(distancePoints(0)).toBe(5000);
+    expect(distancePoints(50)).toBe(5000);
+    expect(distancePoints(4000)).toBe(0);
+    expect(distancePoints(1000)).toBeLessThan(distancePoints(500));
+    expect(distancePoints(2025)).toBe(2500);
+  });
+  const round: Round = { id: 1, map: 0, ...at(1), zone: 12, mapZone: 12, subzone: 87, mapArea: 87, name: "Goldshire", zoneName: "Elwynn Forest" };
+  test("on the spot: the distance's full points and both bonuses", () => {
+    const r = judge(atlas, round, { map: 0, x: round.x + 3, y: round.y + 4 });
+    expect(r).toMatchObject({ yards: 5, distance: 5000, zone: true, subzone: true, points: ROUND_MAX });
+  });
+  test("the next chunk: the zone, not the subzone", () => {
+    const r = judge(atlas, round, { map: 0, ...at(0) });
+    expect(r.zone).toBe(true);
+    expect(r.subzone).toBe(false);
+    expect(r.points).toBe(r.distance + 500);
+  });
+  test("the sea: no bonus", () => {
+    expect(judge(atlas, round, { map: 0, ...at(2) })).toMatchObject({ zone: false, subzone: false });
+  });
+  test("a city in a WMO: the zone and the area the map shows under it count", () => {
+    const city = { ...round, zone: 1537, mapZone: 12, subzone: 1537, mapArea: 87 };
+    expect(judge(atlas, city, { map: 0, ...at(1) })).toMatchObject({ zone: true, subzone: true, points: ROUND_MAX });
+    expect(judge(atlas, city, { map: 0, ...at(0) })).toMatchObject({ zone: true, subzone: false });
+  });
+  test("a landmark on the zone's own ground: that ground is its subzone", () => {
+    const open = { ...round, ...at(0), subzone: 12, mapArea: 12 };
+    expect(judge(atlas, open, { map: 0, ...at(0) })).toMatchObject({ zone: true, subzone: true, points: ROUND_MAX });
+    expect(judge(atlas, open, { map: 0, ...at(1) })).toMatchObject({ zone: true, subzone: false });
+  });
+  test("the other continent: nothing", () => {
+    expect(judge(atlas, round, { map: 1, ...at(1) })).toMatchObject({ yards: null, points: 0 });
+  });
+});
+
+describe("a game's rounds", () => {
+  const all = (JSON.parse(readFileSync(new URL("../locations.json", import.meta.url), "utf8")).locations as Round[]);
+  test("five, each from another zone", () => {
+    let seed = 7;
+    const random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+    for (let i = 0; i < 50; i++) {
+      const rounds = pickRounds(all, 5, random);
+      expect(rounds.length).toBe(5);
+      expect(new Set(rounds.map((r) => r.zone)).size).toBe(5);
+    }
+  });
+});

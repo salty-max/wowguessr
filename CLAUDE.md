@@ -15,6 +15,11 @@ WoW addons folder but not an addon.
   (`bun wow-data/bin/terrain.ts classic` first; `docs/picker.md`).
 - `bun scripts/render.ts --renderer <binary> --workdir <dir> --casc <dir>`: a sample rendered,
   checked and laid on contact sheets in `.cache/renders/` (`--all`: every one).
+- `bun run dev`: the game page at http://127.0.0.1:4195 (the family's
+  `geoguessr-game` launch entry): `scripts/site.ts` builds `site/` (the maps
+  drawn from wow-data, the rounds, the pictures from `.cache/review3/webp`,
+  the page bundled; `--maps` redraws the maps, `--marks` draws every camera
+  on them), `scripts/serve.ts` serves it. Never committed.
 - `bun harness/board.ts list`, `bun harness/hooks.ts status`.
 
 ## Docs
@@ -23,6 +28,8 @@ WoW addons folder but not an addon.
   patches, timings, what is open).
 - `docs/picker.md`: the landmark picker (what a landmark is, how its camera is
   chosen, locations.json, the samples looked at, the first picker's history).
+- `docs/game.md`: the game page (a game, the score, our own continent maps
+  drawn from the terrain, the yards-to-pixels frame and how it was checked).
 
 ## Hard rules
 
@@ -30,6 +37,7 @@ WoW addons folder but not an addon.
   opened and looked at before it counts as done.
 - **Ship only rendered pictures, never Blizzard's files**: no M2, WMO, BLP,
   ADT, CASC data or listfile in this repository, committed or not. The
+  continent maps are drawn from wow-data's terrain, never the game's map art. The
   renderer and its build live in a scratch folder outside it.
 - **No deploy, no GitHub repository, no domain, no push** without the user's
   go, asked in the session that wants it.

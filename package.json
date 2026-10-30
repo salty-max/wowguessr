@@ -6,7 +6,9 @@
     "test": "bun test",
     "check": "tsc --noEmit && bun test",
     "pick": "bun scripts/pick.ts",
-    "render": "bun scripts/render.ts"
+    "render": "bun scripts/render.ts",
+    "site": "bun scripts/site.ts",
+    "dev": "bun scripts/serve.ts"
   },
   "devDependencies": {
     "@types/bun": "1.3.0",

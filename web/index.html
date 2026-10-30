@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>geoguessr (working title)</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Where is this?</h1>
+      <div id="status"><span id="round"></span><span id="total"></span></div>
+    </header>
+    <main id="game">
+      <section id="view">
+        <img id="picture" alt="A place somewhere on the two continents" />
+      </section>
+      <section id="board">
+        <nav id="continents"></nav>
+        <div id="viewport">
+          <div id="stage">
+            <img id="map" alt="" draggable="false" />
+            <svg id="overlay"></svg>
+            <div id="labels"></div>
+            <div id="marks"></div>
+          </div>
+          <div id="hover"></div>
+          <div id="zoom"><button id="zoom-in" title="Zoom in">+</button><button id="zoom-out" title="Zoom out">&minus;</button></div>
+        </div>
+        <div id="actions">
+          <p id="hint">Pick the continent, then click where you think this is.</p>
+          <div id="result" hidden></div>
+          <button id="guess" disabled>Guess</button>
+          <button id="next" hidden>Next round</button>
+        </div>
+      </section>
+    </main>
+    <section id="summary" hidden></section>
+    <script type="module" src="game.js"></script>
+  </body>
+</html>
