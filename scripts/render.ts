@@ -54,12 +54,15 @@ for (const l of sample) {
   for (const f of [raw, file, path.join(OUT, "webp", `${l.id}.webp`)]) rmSync(f, { force: true });
   const t0 = performance.now();
   // the renderer waits for every file a frame needs: one the local client
-  // never loads would hold it for ever, so it gets 30 seconds (a frame takes 1 or 2), its log kept
+  // never downloaded (Battle.net's repair doesn't fetch it either) comes from
+  // Blizzard's CDN with WOW_ONLINE (the scratch patch), cached in the workdir's
+  // cache/; one it still can't get would hold it for ever, so it gets 60
+  // seconds (a frame takes 1 or 2, a cold fetch more), its log kept
   const r = Bun.spawnSync(
     [RENDERER, "-casc", CASC, "-map", String(l.map), String(WDT[l.map]),
       "-camera", String(l.x), String(l.y), String(l.z), "-lookat", ...l.lookAt.map(String),
       "-size", String(W), String(H), "-time", TIME, "-output", raw],
-    { cwd: WORKDIR, env: { ...process.env, DYLD_LIBRARY_PATH: "/opt/homebrew/lib", WOW_PRODUCT: "wow_classic_era" }, stdout: "pipe", stderr: "pipe", timeout: 30_000 },
+    { cwd: WORKDIR, env: { ...process.env, DYLD_LIBRARY_PATH: "/opt/homebrew/lib", WOW_PRODUCT: "wow_classic_era", WOW_ONLINE: "1" }, stdout: "pipe", stderr: "pipe", timeout: 60_000 },
   );
   writeFileSync(path.join(OUT, `${l.id}.log`), r.stdout.toString() + r.stderr.toString());
   if (r.exitCode !== 0 || !existsSync(raw)) {

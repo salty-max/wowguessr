@@ -47,7 +47,9 @@ in CI, so it needed:
     (`wow_classic_era`; it defaults to retail), and `-exportdb <dbd dir>`,
     the GUI's database workflow headless: it writes `export.db3` (Light,
     LightParams, AreaTable, Map, ...) from the client's own DB2s, with
-    current WoWDBDefs definitions (the submodule's are too old for 1.15.9)
+    current WoWDBDefs definitions (the submodule's are too old for 1.15.9),
+    and `WOW_ONLINE` (added 30 October): the TACT library may fetch a file
+    the client lacks from Blizzard's CDN
 
 Run with `DYLD_LIBRARY_PATH=/opt/homebrew/lib` (volk's dlopen), and a CASC
 root mirroring the client's `Data/` with a `.build.info` naming a CDN config
@@ -88,7 +90,11 @@ The client's own `.build.info` now names configs that are on disk, so the
 CASC root is a folder with a copy of it and links to the client's
 `Data/config`, `data`, `indices` and `ecache`. A camera whose frame needs a
 file the installed client hasn't downloaded hangs the renderer for ever
-(2 of the first 30): `scripts/render.ts` gives each 30 seconds.
+(2 of the first 30): `scripts/render.ts` gives each 60 seconds, and sets
+`WOW_ONLINE`, which the patch reads to let the TACT library fetch such a file
+from Blizzard's CDN (cached in the workdir's `cache/`; `picker.md`, "The
+missing files"). After a launcher repair or update, copy the client's
+`.build.info` into the CASC root again: its CDN config moves.
 
 ## The light (30 October 2026)
 

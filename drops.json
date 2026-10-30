@@ -1,5 +1,5 @@
 {
- "about": "Landmarks left out of locations.json after their pictures were looked at, by placement (map, wmo: wmo_placement unique_id), so a new run of scripts/pick.ts keeps them out and fills their zone from the next best. by: draft (proposed from the contact sheets, waiting on the user eye pass), user, or render (it never rendered: the installed client lacks the area files, so the entry goes once the client has them). Near-duplicates (the same model or the same name twice in a zone) are not listed: the picker keeps one of each (src/landmarks.ts choose). empty: a zone left with no picture on purpose, with why (test/locations.test.ts refuses any other).",
+ "about": "Landmarks left out of locations.json after their pictures were looked at, by placement (map, wmo: wmo_placement unique_id), so a new run of scripts/pick.ts keeps them out and fills their zone from the next best. by: draft (proposed from the contact sheets, waiting on the user eye pass), user, or render (it never rendered; none left since the renderer fetches the files the client lacks). Near-duplicates (the same model or the same name twice in a zone) are not listed: the picker keeps one of each (src/landmarks.ts choose). empty: a zone left with no picture on purpose, with why (test/locations.test.ts refuses any other).",
  "drops": [
   {
    "map": 0,
@@ -122,76 +122,6 @@
   },
   {
    "map": 0,
-   "wmo": 129367,
-   "name": "The Writhing Haunt",
-   "why": "never rendered: the installed client lacks its files (#65)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 179489,
-   "name": "Thoradin's Wall",
-   "why": "never rendered: the installed client lacks its files (#102)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 188687,
-   "name": "Northfold Manor",
-   "why": "never rendered: the installed client lacks its files (#105)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 184800,
-   "name": "Bogen's Ledge",
-   "why": "never rendered: the installed client lacks its files (#114)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 397992,
-   "name": "Quel'Danil Lodge",
-   "why": "never rendered: the installed client lacks its files (#118)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 179488,
-   "name": "Thoradin's Wall",
-   "why": "never rendered: the installed client lacks its files (#159)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 176001,
-   "name": "Nethander Stead",
-   "why": "never rendered: the installed client lacks its files (#160)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 180882,
-   "name": "Southshore",
-   "why": "never rendered: the installed client lacks its files (#161)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 173707,
-   "name": "Hillsbrad Fields",
-   "why": "never rendered: the installed client lacks its files (#162)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 178119,
-   "name": "Thoradin's Wall",
-   "why": "never rendered: the installed client lacks its files (#163)",
-   "by": "render"
-  },
-  {
-   "map": 0,
    "wmo": 51586,
    "name": "Chill Breeze Valley",
    "why": "nothing to guess from (#229, refill of 30 October)",
@@ -255,34 +185,6 @@
   },
   {
    "map": 0,
-   "wmo": 178115,
-   "name": "Thoradin's Wall",
-   "why": "never rendered: the installed client lacks its files (#247)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 205738,
-   "name": "Dabyrie's Farmstead",
-   "why": "never rendered: the installed client lacks its files (#248)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 461908,
-   "name": "Durnholde Keep",
-   "why": "never rendered: the installed client lacks its files (#282)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 461820,
-   "name": "Durnholde Keep",
-   "why": "never rendered: the installed client lacks its files (#294)",
-   "by": "render"
-  },
-  {
-   "map": 0,
    "wmo": 76430,
    "name": "Stonard",
    "why": "nothing to guess from (#296, refill of 30 October)",
@@ -294,69 +196,6 @@
    "name": "Wetlands",
    "why": "nothing to guess from (#297, refill of 30 October)",
    "by": "draft"
-  },
-  {
-   "map": 0,
-   "wmo": 189258,
-   "name": "Northfold Manor",
-   "why": "never rendered: the installed client lacks its files (#300)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 178118,
-   "name": "Thoradin's Wall",
-   "why": "never rendered: the installed client lacks its files (#301)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 173749,
-   "name": "Southshore",
-   "why": "never rendered: the installed client lacks its files (#306)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 178114,
-   "name": "Thoradin's Wall",
-   "why": "never rendered: the installed client lacks its files (#307)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 189257,
-   "name": "Northfold Manor",
-   "why": "never rendered: the installed client lacks its files (#311)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 178120,
-   "name": "Thoradin's Wall",
-   "why": "never rendered: the installed client lacks its files (#312)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 205739,
-   "name": "Dabyrie's Farmstead",
-   "why": "never rendered: the installed client lacks its files (#313)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 173756,
-   "name": "Southshore",
-   "why": "never rendered: the installed client lacks its files (#314)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": 462243,
-   "name": "Thoradin's Wall",
-   "why": "never rendered: the installed client lacks its files (#315)",
-   "by": "render"
   },
   {
    "map": 0,
@@ -455,13 +294,6 @@
    "name": "Vault of Ironforge",
    "why": "nothing to guess from (#368, widening of 30 October: a wall in the face or too dark)",
    "by": "draft"
-  },
-  {
-   "map": 0,
-   "wmo": 197658,
-   "name": "Gallows' Corner",
-   "why": "never rendered: the installed client lacks its files (#401)",
-   "by": "render"
   },
   {
    "map": 0,
@@ -689,34 +521,6 @@
   },
   {
    "map": 0,
-   "wmo": -2000093345,
-   "name": "Zun'watha",
-   "why": "never rendered: the installed client lacks its files (#581)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": -2000093520,
-   "name": "Quel'Danil Lodge",
-   "why": "never rendered: the installed client lacks its files (#582)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": -2000015663,
-   "name": "Nethander Stead",
-   "why": "never rendered: the installed client lacks its files (#612)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": -2000015830,
-   "name": "Durnholde Keep",
-   "why": "never rendered: the installed client lacks its files (#613)",
-   "by": "render"
-  },
-  {
-   "map": 0,
    "wmo": -2000038813,
    "name": "Fallow Sanctuary",
    "why": "nothing to guess from (#645, widening of 30 October)",
@@ -766,27 +570,6 @@
   },
   {
    "map": 0,
-   "wmo": -2000011960,
-   "name": "Arathi Highlands",
-   "why": "never rendered: the installed client lacks its files (#651)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": -3000000043,
-   "name": "Aerie Peak",
-   "why": "never rendered: the installed client lacks its files (#652)",
-   "by": "render"
-  },
-  {
-   "map": 0,
-   "wmo": -2000015584,
-   "name": "Durnholde Keep",
-   "why": "never rendered: the installed client lacks its files (#659)",
-   "by": "render"
-  },
-  {
-   "map": 0,
    "wmo": -2000090354,
    "name": "Westfall",
    "why": "nothing to guess from (#661, widening of 30 October)",
@@ -812,13 +595,6 @@
    "name": "Palemane Rock",
    "why": "nothing to guess from (#665, widening of 30 October)",
    "by": "draft"
-  },
-  {
-   "map": 0,
-   "wmo": -2000092849,
-   "name": "Aerie Peak",
-   "why": "never rendered: the installed client lacks its files (#662)",
-   "by": "render"
   },
   {
    "map": 0,

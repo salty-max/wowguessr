@@ -336,9 +336,8 @@ Looked at on the contact sheet, not only tested.
   About 22 of 30 read as a place: **8 of 30 unusable (27%)**. Starting the
   far slope check at 15 yards rather than 20 changed none of the 500.
 
-What would lift it next: the timeouts are the client's (files it hasn't
-downloaded: a launcher repair or a full install would end them, or the
-renderer could skip a file it can't read), a detail test (edge energy) for
+What would lift it next: the timeouts were the client's (a file it hasn't
+downloaded, fetched from the CDN since: "The missing files" below), a detail test (edge energy) for
 the dull and dark shots the image check passes, and a last eye pass on the
 batch's contact sheets for the rest.
 
@@ -397,9 +396,9 @@ added to `drops.json`, and the picker run again:
   each round there only spends another candidate. So the last 4 (316 to
   319) stay in `locations.json` unrendered and the rounds stop there.
 
-A timeout's entry in `drops.json` says `by: "render"`: it is the client's,
-not a judgment of the picture, and goes once a launcher repair or a full
-install brings the files. The duplicates rule keeps the best-scored of each,
+A timeout's entry in `drops.json` said `by: "render"`: it was the client's,
+not a judgment of the picture. They are gone now (see "The missing files"
+below). The duplicates rule keeps the best-scored of each,
 as the draft did, but 3 came back where the draft's twin was dropped instead
 (Zul'Mamwe's other ruin, Render's Valley, Darrowshire).
 
@@ -411,11 +410,39 @@ out, and each zone's counts (the batch, after the draft, now, its share).
 ## The merged review page (30 October 2026, after the widening)
 
 `.cache/review3/review.html` (the `geoguessr-landmarks` launch entry, port
-4194): every camera in locations.json (335) and every draft drop (87, red;
+4194): every camera in locations.json (335, 342 since the missing files) and
+every draft drop (87, red;
 near-duplicates orange), by zone, each zone's kept count and share; by
 default only what's new since the first page (261 pictures), a box to show
 all. A click drops or keeps, the list to copy at the top. It replaces the
 two earlier pages (`.cache/batch3/`, `.cache/review2/`), on which no
-decision had been given. Four cameras in Hillsbrad and Arathi show "no
-render": the installed client lacks their files.
+decision had been given. Four cameras in Hillsbrad and Arathi showed "no
+render" until the missing files came (below): the page now carries their
+replacements, and none without a render.
 
+## The missing files (30 October 2026)
+
+Every timeout was one file (encoding key `00014a82a0f8dac611b8556f85138e47`,
+in 77 render logs, Hillsbrad, Arathi, the Hinterlands, Alterac) that the
+installed client never downloaded. Battle.net's Scan and Repair didn't
+fetch it: the launcher doesn't count it as part of the install (it rebuilt
+the indices and moved the CDN config, so the CASC root's `.build.info` is
+copied again from the client's). The renderer's TACT library can fetch a
+missing file from Blizzard's CDN, off by default: the scratch patch turns it
+on with `WOW_ONLINE`, which `scripts/render.ts` sets, the files cached in
+the workdir's `cache/` (20 MB for the first four frames). A cold fetch must
+fit the frame's timeout, raised to 60 seconds for it: a timeout now may be
+a slow fetch, so render the camera again before dropping it. The 32
+render-only drops left `drops.json`, the picker ran again: 342 cameras, 15
+new (Southshore, Durnholde Keep, Northfold Manor, Thoradin's Wall in Arathi
+and in Hillsbrad, Aerie Peak, Quel'Danil Lodge, Bogen's Ledge, Zun'watha,
+Gallows' Corner, the Writhing Haunt, Go'Shek Farm, Dabyrie's Farmstead,
+Nethander Stead, Hillsbrad Fields), every one rendered and read as a place;
+8 swapped out: 5 for a better-scored building of the same place (Northfold
+Manor, Thoradin's Wall twice, Southshore, Hillsbrad Fields), 2 for a
+worse-scored one because a returning neighbour took the model or the spot
+(Go'Shek Farm #106 1.28 to #676 0.92, widened, the Writhing Haunt #299 0.94
+to #671 0.92), and Dandred's Fold (#490) left Alterac, its slot taken by
+Gallows' Corner (#672). Nobody chose those three: they are the picker's. Thoradin's
+Wall's two frames look alike (one wall across two zones): #682 is orange
+on the review page, the user's call.
