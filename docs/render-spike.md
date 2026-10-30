@@ -103,16 +103,17 @@ light heavily, so a saturated sun paints everything it touches. Shown by
 renders of Goldshire with each colour set to neutral grey on a scratch copy
 of `export.db3`: grey ambient left it orange, a grey sun made it right.
 
-**The fix**, in the renderer, not on the picture: keep 0.35 of the direct
-light's saturation, the rest pulled to its luminance (`GEO_DIRECT_SAT`
-overrides it, 1 = the data as it is; `GEO_DIRECT_GAIN` scales it). Noon is
-fixed by `-time 1440` (render.ts' default). The hunk, on top of the macOS
+**The fix**, in the renderer, not on the picture: keep part of the direct
+light's saturation, the rest pulled to its luminance (first 0.35, then 0.2
+after the second pass below; `GEO_DIRECT_SAT` overrides it, 1 = the data as
+it is; `GEO_DIRECT_GAIN` scales it). Noon is
+fixed by `-time 1440` (render.ts' default). The hunk (both passes), on top of the macOS
 patch (the whole patch: `geoguessr-offlineRenderer-macos-light.patch` in the
 group's shared notes folder):
 
 ```diff
 diff --git a/wowViewerLib/src/engine/objects/scenes/dayNightDataHolder/DayNightLightHolder.cpp b/wowViewerLib/src/engine/objects/scenes/dayNightDataHolder/DayNightLightHolder.cpp
-index c15fc7e6..dfd773d8 100644
+index c15fc7e6..9fa6cc56 100644
 --- a/wowViewerLib/src/engine/objects/scenes/dayNightDataHolder/DayNightLightHolder.cpp
 +++ b/wowViewerLib/src/engine/objects/scenes/dayNightDataHolder/DayNightLightHolder.cpp
 @@ -1,3 +1,4 @@
@@ -120,27 +121,66 @@ index c15fc7e6..dfd773d8 100644
  //
  // Created by Deamon on 7/5/2024.
  //
-@@ -924,6 +925,20 @@ void DayNightLightHolder::calcLightParamResult(int lightParamId, const Config *c
+@@ -924,6 +925,32 @@ void DayNightLightHolder::calcLightParamResult(int lightParamId, const Config *c
              exteriorColors.exteriorHorizontAmbientColor = exteriorColors.exteriorAmbientColor;
  
          exteriorColors.exteriorDirectColor   = mixMembers<3>(lightParamData, &LightTimedData::directColor, blendTimeCoeff);
 +        // geoguessr scratch: Classic's default light has a saturated orange
 +        // sun (0xff8800 at noon) that this retail-tuned shader overweights.
-+        // Keep 0.35 of the direct colour's saturation (GEO_DIRECT_SAT overrides,
++        // Keep 0.2 of the direct colour's saturation (GEO_DIRECT_SAT overrides,
 +        // 1 = as the data has it), the rest pulled to its luminance;
 +        // GEO_DIRECT_GAIN scales it.
 +        {
 +            const char *sat = std::getenv("GEO_DIRECT_SAT");
-+            float k = sat ? std::atof(sat) : 0.35f;
++            float k = sat ? std::atof(sat) : 0.2f;
 +            auto &d = exteriorColors.exteriorDirectColor;
 +            float lum = 0.299f * d.x + 0.587f * d.y + 0.114f * d.z;
 +            d = mathfu::vec3(lum, lum, lum) + (d - mathfu::vec3(lum, lum, lum)) * k;
 +        }
 +        if (const char *gain = std::getenv("GEO_DIRECT_GAIN"))
 +            exteriorColors.exteriorDirectColor = exteriorColors.exteriorDirectColor * (float) std::atof(gain);
++        // geoguessr scratch: the zones' own ambients are strongly tinted too
++        // (the Badlands purple, Moonglade teal, Winterspring violet) and the
++        // shader multiplies every texture by them: keep 0.5 of their saturation,
++        // at their luminance (GEO_AMBIENT_SAT overrides, 1 = the data as it is).
++        {
++            const char *sat = std::getenv("GEO_AMBIENT_SAT");
++            float k = sat ? std::atof(sat) : 0.5f;
++            for (auto *c : {&exteriorColors.exteriorAmbientColor, &exteriorColors.exteriorHorizontAmbientColor, &exteriorColors.exteriorGroundAmbientColor}) {
++                float lum = 0.299f * c->x + 0.587f * c->y + 0.114f * c->z;
++                *c = mathfu::vec3(lum, lum, lum) + (*c - mathfu::vec3(lum, lum, lum)) * k;
++            }
++        }
          exteriorColors.exteriorSpecularColor = mixMembers<3>(lightParamData, &LightTimedData::SunColor, blendTimeCoeff);
  
          //Liquid colors
+@@ -1005,6 +1032,26 @@ void DayNightLightHolder::calcLightParamResult(int lightParamId, const Config *c
+         fogResult.HeightEndFogColor = mixMembers<3>(lightParamData, &LightTimedData::EndFogHeightColor, blendTimeCoeff);
+         fogResult.FogStartOffset =    mixMembers<1>(lightParamData, &LightTimedData::FogStartOffset, blendTimeCoeff);
+ 
++        // geoguessr scratch: the zones' fog colours are strongly tinted (the
++        // Plaguelands' orange, Moonglade's cyan, Winterspring's violet) and fill
++        // the distance: keep 0.3 of their saturation at their luminance
++        // (GEO_FOG_SAT overrides, 1 = the data as it is); GEO_FOG_FAR pushes
++        // the fog's end out (tried at 2: no visible gain, so off).
++        {
++            const char *sat = std::getenv("GEO_FOG_SAT");
++            float k = sat ? std::atof(sat) : 0.3f;
++            for (auto *c : {&fogResult.FogColor, &fogResult.EndFogColor, &fogResult.SunFogColor, &fogResult.FogHeightColor, &fogResult.HeightEndFogColor}) {
++                float lum = 0.299f * c->x + 0.587f * c->y + 0.114f * c->z;
++                *c = mathfu::vec3(lum, lum, lum) + (*c - mathfu::vec3(lum, lum, lum)) * k;
++            }
++            if (const char *far = std::getenv("GEO_FOG_FAR")) {
++                float f = std::atof(far);
++                fogResult.FogEnd *= f;
++                fogResult.MainFogStartDist *= f;
++                fogResult.MainFogEndDist *= f;
++            }
++        }
++
+         if (fogResult.FogHeightCoefficients.LengthSquared() <= 0.00000011920929f ){
+             //Client falls back to DB-ordered (0,0,0,1); stored reversed for the shader here
+             fogResult.FogHeightCoefficients = mathfu::vec4(1,0,0,0);
 ```
 
 **Gray world is gone** from `scripts/render.ts`: it did more harm than good
@@ -159,3 +199,41 @@ their own lights are (the Barrens' sun `0xff9c56`, ambient `0x6a5742`; the
 swamp's sky is orange in the data). That is probably the game's own look,
 but no in-game picture of the same spot at noon was at hand to compare. One
 screenshot at the Crossroads at noon would settle it.
+
+### The second pass (the zones' own lights)
+
+The landmark sample showed zones with their own lights still tinted hard:
+the Badlands and the Searing Gorge red, the Eastern Plaguelands rust,
+Winterspring violet, Moonglade cyan. Their noon lights in the data:
+
+| Zone (light, param) | Sun | Ambient | Sky | Fog |
+|---|---|---|---|---|
+| Badlands (6, 21) | `ffcc88` | `482f6b` violet | `1f0a1b` | `2a1c23` |
+| Eastern Plaguelands (42, 56) | `b33600` rust | `99906c` | `513419` brown | `9b511f` rust |
+| Winterspring (259, 262) | `afa2ce` lavender | `7d4882` violet | `8a5fac` violet | `7c3f91` violet |
+| Moonglade (196, 202) | `00ffff` cyan | `006976` teal | `00c3c3` | `00c9c9` cyan |
+| Dun Morogh (22, 34), right | `c7a886` | `1f527d` | `69c8de` | `56b3d4` |
+
+Tried one at a time on these cameras and on three that read right (Dun
+Morogh, Elwynn, Westfall), `GEO_*` switches on the scratch build:
+
+- **The ambient's saturation** (0.5, 0.25): barely moves anything.
+- **The fog's saturation** (0.3): the biggest lever. The distance stops
+  taking the fog's colour (the Plaguelands' far hills go from rust to brown).
+- **The fog pushed out** (x2): no visible gain, left off.
+- **The sun at 0.15 with the ambient at 0.5**, on top of the fog: the
+  Plaguelands brown, not rust, Winterspring's snow whiter.
+
+Kept as the renderer's defaults: the sun 0.2, the ambient 0.5, the fog 0.3
+(each `GEO_*` switch overrides, 1 = the data as it is). Before and after on
+11 cameras (`.cache/light3/before-after.jpg`): the Plaguelands and
+Winterspring calmer, Dun Morogh, Elwynn and Westfall unchanged.
+
+**What stays strong, and is probably the game's own look (not verified):**
+the Badlands' and the Searing Gorge's red is their rock textures', not the
+light. The skies keep their colour (the Plaguelands' brown, Winterspring's
+violet, Moonglade's teal), and Moonglade's water stays cyan (the liquid's
+own colour). Moonglade's sun is pure cyan in the data, a zone the game
+paints in a teal dusk. No in-game picture of these places at noon was at
+hand: one each (or the Crossroads at noon, for the scale of it all) would
+settle how far the renderer still is from the client.
