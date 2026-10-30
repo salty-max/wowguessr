@@ -180,3 +180,22 @@ downloaded: a launcher repair or a full install would end them, or the
 renderer could skip a file it can't read), a detail test (edge energy) for
 the dull and dark shots the image check passes, and a last eye pass on the
 batch's contact sheets for the rest.
+
+## The batch (30 October 2026, the 227 with the second light pass)
+
+227 rendered in about 8 minutes: 217 pictures, 10 timeouts (files the
+installed client hasn't downloaded, all in Hillsbrad, the Hinterlands and
+Ashenvale's north), 1 flagged by the image test (Northpass Tower). Looked at
+whole, 8 contact sheets: the draft drop list is 17 more, frames with no
+landmark worth guessing from (a snow mound, a bare hill, rocks, a shell on
+Misty Reed Strand, a branch in the face at Crown Guard Tower, Fire Plume
+Ridge's dark rocks). That leaves about 200 for the user's eye pass
+(`.cache/batch3/review.html`, served by the `geoguessr-review` launch entry:
+red is the draft, a click drops or keeps, the list to copy at the top).
+
+Colour, by eye: the snow, Elwynn, Westfall, Stranglethorn, Ashenvale,
+Mulgore and Desolace read right. Still strong: Durotar's orange sky and
+ground, the Badlands' and the Searing Gorge's red rock, the Eastern
+Plaguelands' rust, Silithus' orange sky, Winterspring's violet. These are
+the zones' own lights and textures, probably the game's look, not verified
+against it.
