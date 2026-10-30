@@ -407,3 +407,15 @@ For the user's pass: `.cache/review2/review.html` (the `geoguessr-refill`
 launch entry), only what changed since the first page: the 61 new (4 with
 no render), the 11 draft drops in red, the 3 back in blue, the one swapped
 out, and each zone's counts (the batch, after the draft, now, its share).
+
+## The merged review page (30 October 2026, after the widening)
+
+`.cache/review3/review.html` (the `geoguessr-landmarks` launch entry, port
+4194): every camera in locations.json (335) and every draft drop (87, red;
+near-duplicates orange), by zone, each zone's kept count and share; by
+default only what's new since the first page (261 pictures), a box to show
+all. A click drops or keeps, the list to copy at the top. It replaces the
+two earlier pages (`.cache/batch3/`, `.cache/review2/`), on which no
+decision had been given. Four cameras in Hillsbrad and Arathi show "no
+render": the installed client lacks their files.
+
