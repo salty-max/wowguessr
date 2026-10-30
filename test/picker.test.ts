@@ -1,6 +1,6 @@
 // The picker's parts on a made-up patch of ground: no database, no game file.
 import { describe, expect, test } from "bun:test";
-import { CHUNK, type ChunkRow, Ground, ORIGIN, UNIT, type WmoRow, Wmos } from "../src/ground";
+import { apart, CHUNK, type ChunkRow, type DoodadRow, Doodads, Ground, ORIGIN, solid, UNIT, type WmoRow, Wmos } from "../src/ground";
 import { aim, type Candidate, order, quotas, random, spread, stand } from "../src/pick";
 import { check, grayWorld } from "../src/imagecheck";
 
@@ -87,6 +87,51 @@ describe("where a camera looks", () => {
     expect(Math.hypot(x - mx, y - my, z - 52.5)).toBeCloseTo(30, 0);
     expect(Math.atan2(y - my, x - mx)).toBeCloseTo(a.yaw > Math.PI ? a.yaw - 2 * Math.PI : a.yaw, 2);
     expect(Math.abs(a.pitch)).toBeLessThanOrEqual(8 * Math.PI / 180 + 1e-9);
+  });
+});
+
+describe("the doodads", () => {
+  // a model with a collision box 1 yard either side and 6 high, placed at (x, y) at scale
+  const rock = (x: number, y: number, scale = 1, z = 50): DoodadRow =>
+    ({ x, y, z, yaw: 0, scale, col_min_x: -1, col_min_y: -1, col_min_z: 0, col_max_x: 1, col_max_y: 1, col_max_z: 6 });
+  test("a solid is its collision box turned and scaled; grass (no box, or an empty one) is none", () => {
+    const d = solid(rock(0, 0, 2))!;
+    expect([d.cx, d.cy, d.hx, d.hy, d.bottom, d.top]).toEqual([0, 0, 2, 2, 50, 62]);
+    expect(solid({ ...rock(0, 0), col_min_x: 0, col_max_x: 0, col_min_y: 0, col_max_y: 0, col_max_z: 0 })).toBeNull();
+    expect(solid({ ...rock(0, 0), col_min_x: 1e7, col_max_x: -1e7 })).toBeNull();
+  });
+  test("a wall 20 yards long turned with its placement: along yaw + 180 degrees, its offset box moved with it", () => {
+    // its box runs x 0 to 20 (from its foot forward), 1 yard thick; yaw 270: +x points to the game's facing 90 (west, +y)
+    const wall = solid({ ...rock(0, 0), yaw: 270, col_min_x: 0, col_max_x: 20, col_min_y: -0.5, col_max_y: 0.5 })!;
+    expect(wall.cx).toBeCloseTo(0, 6);
+    expect(wall.cy).toBeCloseTo(10, 6);
+    expect(apart(wall, 0, 15)).toBeCloseTo(0, 6);
+    expect(apart(wall, 5, 15)).toBeCloseTo(4.5, 6);
+    expect(apart(wall, 0, -5)).toBeCloseTo(5, 6);
+  });
+  test("a cliff piece 300 yards across is found from anywhere near its rectangle, not only near its foot", () => {
+    const cliff = new Doodads([{ ...rock(0, 0), col_min_x: -150, col_max_x: 150, col_min_y: -150, col_max_y: 150 }]);
+    expect(cliff.near(140, 140, 1).length).toBe(1);
+    expect(cliff.near(160, 0, 5).length).toBe(0);
+  });
+  test("a camera inside a trunk, or a yard from one, is refused", () => {
+    const flat = new Ground(field());
+    expect(stand(at(), flat, new Wmos([]), new Doodads([rock(mx + 1.5, my)]))).toEqual({ reason: "doodad" });
+    expect(stand(at(), flat, new Wmos([]), new Doodads([rock(mx + 4, my)]))).toEqual({ base: 50 });
+  });
+  test("never looking at a rock that would fill the middle of the frame", () => {
+    // 2 yards wide, 4 yards north (+x): about 28 degrees wide (to its corners)
+    const near = new Doodads([rock(mx + 5, my)]);
+    for (let seed = 1; seed <= 30; seed++) {
+      const a = aim(mx, my, 52.5, new Ground(field()), new Wmos([]), random(seed), near)!;
+      const off = Math.abs(((a.yaw + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+      expect(off).toBeGreaterThan(30 * Math.PI / 180);
+    }
+  });
+  test("a small one far off changes nothing", () => {
+    const far = new Doodads([rock(mx + 40, my)]), flat = new Ground(field());
+    for (let seed = 1; seed <= 10; seed++)
+      expect(aim(mx, my, 52.5, flat, new Wmos([]), random(seed), far)).toEqual(aim(mx, my, 52.5, flat, new Wmos([]), random(seed)));
   });
 });
 

@@ -7,7 +7,7 @@
 import { writeFileSync } from "node:fs";
 import type { Database } from "bun:sqlite";
 import { familyPath } from "../src/family";
-import { CHUNK, type ChunkRow, Ground, type WmoRow, Wmos } from "../src/ground";
+import { CHUNK, type ChunkRow, type DoodadRow, Doodads, Ground, type WmoRow, Wmos } from "../src/ground";
 import { type Candidate, order, quotas, random, spread } from "../src/pick";
 
 const arg = (name: string, fallback: string) => {
@@ -40,10 +40,17 @@ const zones = new Set(
      JOIN client_AreaTable t ON t.ID = m.AreaID WHERE u.Type = 3 AND m.MapID IN (0, 1) AND t.ParentAreaID = 0 ORDER BY m.AreaID`).all() as { a: number }[]).map((r) => r.a),
 );
 
-const grounds = new Map<number, Ground>(), boxes = new Map<number, Wmos>();
+const grounds = new Map<number, Ground>(), boxes = new Map<number, Wmos>(), doodads = new Map<number, Doodads>();
 for (const map of MAPS) {
   grounds.set(map, new Ground(terrain.query("SELECT * FROM terrain_chunk WHERE map_id = ? ORDER BY row, col").all(map) as ChunkRow[]));
   boxes.set(map, new Wmos(terrain.query("SELECT * FROM wmo_placement WHERE map_id = ? ORDER BY unique_id").all(map) as WmoRow[]));
+  doodads.set(
+    map,
+    new Doodads(
+      terrain.query(`SELECT p.x, p.y, p.z, p.yaw, p.scale, m.col_min_x, m.col_min_y, m.col_min_z, m.col_max_x, m.col_max_y, m.col_max_z
+        FROM doodad_placement p JOIN doodad_model m ON m.file_id = p.file_id WHERE p.map_id = ? ORDER BY p.unique_id`).all(map) as DoodadRow[],
+    ),
+  );
 }
 
 // the candidates
@@ -85,7 +92,7 @@ for (const [, ground] of grounds) for (const c of ground.all) {
 const want = quotas(new Map([...zones].filter((z) => byZone.has(z)).map((z) => [z, Math.sqrt(size.get(z) ?? 1)])), COUNT);
 
 const queues = new Map([...byZone].map(([z, list]) => [z, order(list, rand)]));
-const worlds = new Map(MAPS.map((m) => [m, { ground: grounds.get(m)!, wmos: boxes.get(m)! }]));
+const worlds = new Map(MAPS.map((m) => [m, { ground: grounds.get(m)!, wmos: boxes.get(m)!, doodads: doodads.get(m)! }]));
 const { picked, rejects, tried, short } = spread(want, queues, worlds, rand, SPACING, PER_SUBZONE);
 
 const name = (id: number) => (db.query("SELECT AreaName_lang n FROM client_AreaTable WHERE ID = ?").get(id) as { n: string } | null)?.n ?? `area ${id}`;

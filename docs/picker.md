@@ -9,11 +9,13 @@ another parser is refused. It runs in about a second.
 
 ## What it reads
 
-- `terrain_chunk` and `wmo_placement`, added to wow-data for this step in
+- `terrain_chunk`, `wmo_placement`, `doodad_placement` and `doodad_model`,
+  added to wow-data for this step in
   a database of their own (`bun wow-data/bin/terrain.ts classic`, never
   released: `wow-data/src/terrain.ts`): the ground's height, holes, the liquid over
   each 4-yard cell and the area the client names there, from the map files'
-  root ADTs; each WMO's bounding box from the `_obj0` ADTs. The heights
+  root ADTs; each WMO's bounding box from the `_obj0` ADTs; each doodad (an
+  M2: a tree, a rock, a banner) and its model's collision box. The heights
   were checked against the Classic database's spawns (median 0.08 yards off
   around Goldshire).
 - Candidates: the Classic database's creature and object spawns, the
@@ -30,12 +32,18 @@ another parser is refused. It runs in about a second.
    a spawn stands above the terrain inside a big WMO (a box 160 yards or
    more across: Stormwind's is 1300). Refused: off the map, over a hole, a
    spawn more than 2 yards under the terrain (a cave, a cellar), inside a
-   building's box (smaller than 160 yards), water more than half a yard
+   building's box (smaller than 160 yards), within a yard of a solid
+   doodad anywhere from 1.5 to 3.5 yards up (`doodad`), water more than half a yard
    deep at the feet, ground steeper than 1.2 (rise over run).
 2. **The eye**: 2 to 3 yards above that ground.
 3. **Where it looks** (`aim`): 16 headings, each blocked by ground at eye
    height within 5 yards, ground rising more than 30 degrees within 20, a
-   building's box within 12, or the map's edge within 20. The rest scored by
+   building's box within 12, the map's edge within 20, or a solid doodad
+   near the middle of the frame: its collision box turned and scaled on the
+   ground (a rectangle, the model's +x along the game's facing yaw + 180,
+   checked by a render), any part of it within 30 degrees of the heading,
+   looking wider than 20 degrees (from its corners) or within 3 yards.
+   Grass and flowers have no collision box and never block. The rest scored by
    how much of 30 to 160 yards ahead lies under the eye line, less for the
    map's edge or a mountain's wall, more for a building 25 to 200 yards
    ahead. One drawn by score. Pitch: 0.4 of the slope to the ground 40
@@ -57,13 +65,13 @@ take them as they are), yaw the game's facing in radians (0 north, +x, a
 quarter turn west, +y), pitch radians up, zone and subzone AreaTable ids,
 ref the candidate it came from.
 
-## The first run (seed 1)
+## The run (seed 1)
 
-500 cameras in 44 zones (Ironforge and Undercity are interiors: none). 832
-candidates tried, 332 refused (39.9%): 145 indoors (a subzone's middle
-inside a city's or a cave's box among them), 85 underground, 62 in water,
-24 steep, 15 over a hole, 1 boxed in. By kind: 158 spawns, 150 subzone
-middles, 149 roads, 43 flight masters.
+500 cameras in 44 zones (Ironforge and Undercity are interiors: none). 1186
+candidates tried, 686 refused (57.8%): 205 indoors (a subzone's middle
+inside a city's or a cave's box among them), 130 underground, 112 at a
+doodad, 112 in water, 88 boxed in (every heading blocked, mostly by trees),
+22 steep, 17 over a hole.
 
 ## Rendering a sample
 
@@ -85,7 +93,7 @@ Looked at on the contact sheet, not only tested.
   one it can't read locally, "unavailable locally (online downloads
   disabled)"; the script now gives each render 30 seconds and counts those
   as rejects), and by eye 11 of the other 28 were bad. About 43% unusable.
-- **Second pass** (the current locations.json): all 30 rendered. The image
+- **Second pass** (before the doodads): all 30 rendered. The image
   test flagged 1 (a lava cave in the Searing Gorge). By eye **9 of 30 are
   bad (30%)**: a tree's trunk filling the frame (3, the M2 doodads, which
   neither the picker nor wow-data knows), bare ground or a slope close up
@@ -97,7 +105,16 @@ Looked at on the contact sheet, not only tested.
   Sorrows, the Burning Steppes): gray world turns it into a green-orange
   band there. The fix belongs in the renderer's light colours.
 
-What would lift it before the batch (step 4): the doodads' placements
-(MDDF in the `_obj0` ADTs, read already by wow-data's terrain build) as a
-table and a clearance check in `aim`, and a detail test (edge energy) for
-the bare-ground shots.
+- **Third pass** (the doodads' clearance, the current locations.json): no
+  trunk or doodad fills a frame any more (4 did in the second). 2 never
+  rendered (files the client hasn't downloaded), and by eye 10 more are
+  ground, a hill or a cliff close up (rising 10 to 20 yards ahead, under
+  the 30 degree limit), one of them a dark rock the image test passed.
+  About 18 of 30 read as a place: **about 40% unusable**, all of it close
+  terrain and timeouts. (A first try with each doodad as a circle around
+  its foot read 30%, but those circles made walls and cliff pieces discs
+  hundreds of yards wide: 30 pictures swing by a few either way.)
+
+What would lift it next: a stricter ground rule in `aim` (ground above the
+eye within 12 yards, or rising more than 12 degrees at 20 to 45 yards, in
+the middle of the frame), and a detail test (edge energy) for bare ground.

@@ -1,7 +1,8 @@
 // The ground of a continent, from wow-data's terrain_chunk (one row per map
 // chunk, 33.3 yards a side): the height under a point, the water over it,
-// a hole in it, the area the client names there. And the WMOs' boxes
-// (wmo_placement), to keep cameras out of buildings.
+// a hole in it, the area the client names there. The WMOs' boxes
+// (wmo_placement), to keep cameras out of buildings, and the solid doodads
+// (doodad_placement, doodad_model), to keep trunks and rocks out of the lens.
 export const ORIGIN = 17066.666666, CHUNK = 533.333333 / 16, UNIT = CHUNK / 8;
 
 export type ChunkRow = {
@@ -100,5 +101,74 @@ export class Wmos {
       for (let j = Math.floor((y - radius) / c); j <= Math.floor((y + radius) / c); j++)
         for (const w of this.grid.get(i * 100_000 + j) ?? []) if (isBuilding(w)) seen.add(w);
     return [...seen].filter((w) => Math.hypot((w.min_x + w.max_x) / 2 - x, (w.min_y + w.max_y) / 2 - y) <= radius);
+  }
+}
+
+// A doodad a camera can't see through: a placement whose model has a
+// collision box (a trunk, a rock, a wall; grass and flowers have none), as
+// that box turned and scaled on the ground (a rectangle: its centre, its long
+// and short half-sides along its axes) and the heights it spans. The model's
+// +x axis lies along the game's facing yaw + 180 degrees (noggit's transform:
+// the line checked by a render of a turned wall in Darkshore, not which end
+// is which), +y a quarter turn left of it.
+export type Solid = { cx: number; cy: number; fx: number; fy: number; hx: number; hy: number; bottom: number; top: number; reach: number };
+export type DoodadRow = {
+  x: number; y: number; z: number; yaw: number; scale: number;
+  col_min_x: number; col_min_y: number; col_min_z: number; col_max_x: number; col_max_y: number; col_max_z: number;
+};
+// thinner than this across (yards) or lower (yards): not in the way
+const THIN = 0.3, LOW = 0.5;
+export function solid(d: DoodadRow): Solid | null {
+  if (d.col_min_x > d.col_max_x || d.col_min_y > d.col_max_y || d.col_min_z > d.col_max_z) return null;
+  const s = d.scale, hx = ((d.col_max_x - d.col_min_x) / 2) * s, hy = ((d.col_max_y - d.col_min_y) / 2) * s;
+  const bottom = d.z + s * d.col_min_z, top = d.z + s * d.col_max_z;
+  if (Math.max(hx, hy) * 2 < THIN || top - bottom < LOW) return null;
+  const t = ((d.yaw + 180) * Math.PI) / 180, fx = Math.cos(t), fy = Math.sin(t);
+  const mx = ((d.col_min_x + d.col_max_x) / 2) * s, my = ((d.col_min_y + d.col_max_y) / 2) * s;
+  // the box's centre: along +x by mx, along +y (left: -fy, fx) by my
+  return { cx: d.x + mx * fx - my * fy, cy: d.y + mx * fy + my * fx, fx, fy, hx, hy, bottom, top, reach: Math.hypot(hx, hy) };
+}
+// how far a point is from a solid's rectangle (0: inside it)
+export function apart(d: Solid, x: number, y: number): number {
+  const dx = x - d.cx, dy = y - d.cy;
+  const a = Math.abs(dx * d.fx + dy * d.fy) - d.hx, b = Math.abs(-dx * d.fy + dy * d.fx) - d.hy;
+  return Math.hypot(Math.max(a, 0), Math.max(b, 0));
+}
+// the bearings of its four corners from a point (radians, the game's facing)
+export function corners(d: Solid, x: number, y: number): number[] {
+  const out: number[] = [];
+  for (const [a, b] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const px = d.cx + a * d.hx * d.fx - b * d.hy * d.fy, py = d.cy + a * d.hx * d.fy + b * d.hy * d.fx;
+    out.push(Math.atan2(py - y, px - x));
+  }
+  return out;
+}
+
+export class Doodads {
+  private grid = new Map<number, Solid[]>();
+  private static readonly CELL = 64;
+  // each solid in every cell its rectangle may touch (a cliff piece is 600
+  // yards across), so a lookup reads only the cells around a point
+  constructor(rows: DoodadRow[]) {
+    const c = Doodads.CELL;
+    for (const row of rows) {
+      const d = solid(row);
+      if (!d) continue;
+      for (let i = Math.floor((d.cx - d.reach) / c); i <= Math.floor((d.cx + d.reach) / c); i++)
+        for (let j = Math.floor((d.cy - d.reach) / c); j <= Math.floor((d.cy + d.reach) / c); j++) {
+          const key = i * 100_000 + j;
+          const list = this.grid.get(key);
+          if (list) list.push(d);
+          else this.grid.set(key, [d]);
+        }
+    }
+  }
+  // the solids whose rectangle comes within radius of a point
+  near(x: number, y: number, radius: number): Solid[] {
+    const c = Doodads.CELL, seen = new Set<Solid>();
+    for (let i = Math.floor((x - radius) / c); i <= Math.floor((x + radius) / c); i++)
+      for (let j = Math.floor((y - radius) / c); j <= Math.floor((y + radius) / c); j++)
+        for (const d of this.grid.get(i * 100_000 + j) ?? []) if (!seen.has(d) && apart(d, x, y) <= radius) seen.add(d);
+    return [...seen];
   }
 }

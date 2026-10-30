@@ -2,11 +2,11 @@
 // patrol's road, a flight master, a subzone's middle) is kept when a
 // character could stand there outdoors, dry, on ground that isn't a cliff,
 // and then turned to the most open heading, a building in view preferred.
-import { type Ground, isBuilding, type Wmos } from "./ground";
+import { apart, corners, Doodads, type Ground, isBuilding, type Wmos } from "./ground";
 
 export type Kind = "subzone" | "road" | "taxi" | "spawn";
 export type Candidate = { kind: Kind; map: number; x: number; y: number; z: number | null; ref: string };
-export type Reason = "off-map" | "hole" | "underground" | "indoors" | "water" | "steep" | "boxed-in";
+export type Reason = "off-map" | "hole" | "underground" | "indoors" | "doodad" | "water" | "steep" | "boxed-in";
 export type Aim = { yaw: number; pitch: number; lookAt: [number, number, number] };
 
 const DEG = Math.PI / 180;
@@ -34,7 +34,8 @@ export function random(seed: number): () => number {
 // big WMO over the terrain). Under the terrain is a cave or a cellar, inside a
 // building's box is indoors, and a point with no height of its own inside any
 // box is refused (its floor unknown).
-export function stand(c: Candidate, ground: Ground, wmos: Wmos): { base: number } | { reason: Reason } {
+const NO_DOODADS = new Doodads([]);
+export function stand(c: Candidate, ground: Ground, wmos: Wmos, doodads = NO_DOODADS): { base: number } | { reason: Reason } {
   const g = ground.height(c.x, c.y);
   if (g == null) return { reason: "off-map" };
   if (ground.hole(c.x, c.y)) return { reason: "hole" };
@@ -53,6 +54,9 @@ export function stand(c: Candidate, ground: Ground, wmos: Wmos): { base: number 
     }
   }
   if (wmos.at(c.x, c.y, base + 1).some(isBuilding)) return { reason: "indoors" };
+  // inside a trunk or a rock, or a yard from one, anywhere the eye may be
+  // (2 to 3 yards up) give or take half a yard
+  if (doodads.near(c.x, c.y, 1).some((d) => d.bottom <= base + 3.5 && d.top >= base + 1.5)) return { reason: "doodad" };
   const water = ground.liquid(c.x, c.y);
   if (water && water.level > base + WADING) return { reason: "water" };
   if (base === g) {
@@ -66,14 +70,21 @@ export function stand(c: Candidate, ground: Ground, wmos: Wmos): { base: number 
 // The heading a camera at eye height looks along, or null when every way is
 // a wall: 16 headings (the game's facing: 0 north, +x, a quarter turn west, +y),
 // each blocked by ground rising to the eye close by, a cliff in the first 20
-// yards, a building's box in the first 12 or the map's edge in the first 20,
+// yards, a building's box in the first 12, the map's edge in the first 20, or
+// a solid doodad near the middle of the frame (any part of it within 30
+// degrees of the heading, looking wider than 20 degrees or within 3 yards),
 // the rest scored by how far it sees (ground under the eye line) and by a
 // building 25 to 200 yards ahead (a place a player knows). One is drawn by
 // score, its pitch slight: 0.4 of the slope to the ground 40 yards ahead, 2
 // degrees down to 3 up on top, within 6 down and 8 up (lower, the first
 // sample's pictures were mostly ground).
-export function aim(x: number, y: number, eye: number, ground: Ground, wmos: Wmos, rand: () => number): Aim | null {
+export function aim(x: number, y: number, eye: number, ground: Ground, wmos: Wmos, rand: () => number, doodads = NO_DOODADS): Aim | null {
   const headings: { yaw: number; score: number }[] = [];
+  // the solids at eye height around: their corners' bearings, how near
+  const solids = doodads
+    .near(x, y, 60)
+    .filter((d) => d.bottom <= eye + 0.5 && d.top >= eye - 0.5)
+    .map((d) => ({ corners: corners(d, x, y), dist: apart(d, x, y) }));
   const buildings = wmos.near(x, y, 200).map((w) => ({ x: (w.min_x + w.max_x) / 2, y: (w.min_y + w.max_y) / 2 }));
   for (let i = 0; i < 16; i++) {
     const yaw = (((i + (rand() - 0.5) * 0.5) * Math.PI) / 8 + 2 * Math.PI) % (2 * Math.PI);
@@ -86,6 +97,17 @@ export function aim(x: number, y: number, eye: number, ground: Ground, wmos: Wmo
         break;
       }
     }
+    // a solid doodad in the middle of the frame (any part of it within 30
+    // degrees of the heading): one looking wider than 20 degrees, or any
+    // within 3 yards
+    if (solids.some((d) => {
+      const offs = d.corners.map((b) => ((b - yaw + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+      const lo = Math.min(...offs), hi = Math.max(...offs);
+      // (spread over more than a half turn: it lies behind, across the back)
+      if (hi - lo > Math.PI) return false;
+      return lo < 30 * DEG && hi > -30 * DEG && (hi - lo > 20 * DEG || d.dist < 3);
+    }))
+      continue;
     if (blocked) continue;
     const far = [30, 45, 60, 90, 120, 160].map((d) => {
       const h = ground.height(x + dx * d, y + dy * d);
@@ -162,13 +184,13 @@ export type Spread = { picked: Location[]; rejects: Record<Reason, number>; trie
 export function spread(
   want: Map<number, number>,
   queues: Map<number, Candidate[]>,
-  worlds: Map<number, { ground: Ground; wmos: Wmos }>,
+  worlds: Map<number, { ground: Ground; wmos: Wmos; doodads?: Doodads }>,
   rand: () => number,
   spacing = 150,
   perSubzone = 3,
 ): Spread {
   const picked: Location[] = [];
-  const rejects: Record<Reason, number> = { "off-map": 0, hole: 0, underground: 0, indoors: 0, water: 0, steep: 0, "boxed-in": 0 };
+  const rejects: Record<Reason, number> = { "off-map": 0, hole: 0, underground: 0, indoors: 0, doodad: 0, water: 0, steep: 0, "boxed-in": 0 };
   const perSub = new Map<number, number>();
   // candidates too close to a pick, kept for a pass with a smaller spacing
   const aside = new Map<number, Candidate[]>();
@@ -179,7 +201,7 @@ export function spread(
     let got = 0;
     while (got < n && queue.length) {
       const c = queue.shift()!;
-      const { ground, wmos } = worlds.get(c.map)!;
+      const { ground, wmos, doodads } = worlds.get(c.map)!;
       const subzone = ground.area(c.x, c.y)!;
       if ((perSub.get(subzone) ?? 0) >= perSubzone) continue;
       if (picked.some((p) => p.zone === zone && p.map === c.map && Math.hypot(p.x - c.x, p.y - c.y) < apart)) {
@@ -187,13 +209,13 @@ export function spread(
         continue;
       }
       tried++;
-      const s = stand(c, ground, wmos);
+      const s = stand(c, ground, wmos, doodads);
       if ("reason" in s) {
         rejects[s.reason]++;
         continue;
       }
       const eye = s.base + 2 + rand();
-      const a = aim(c.x, c.y, eye, ground, wmos, rand);
+      const a = aim(c.x, c.y, eye, ground, wmos, rand, doodads);
       if (!a) {
         rejects["boxed-in"]++;
         continue;
