@@ -2,18 +2,20 @@
 // October 2026): from wow-data's databases only (classic.db and the ground's
 // classic-terrain.db), the landmarks of Eastern Kingdoms and Kalimdor (WMOs
 // standing in named places: src/landmarks.ts; the cities' districts:
-// src/cities.ts), the best viewpoint of each,
+// src/cities.ts; for a zone still short, camps, flight masters and
+// graveyards: src/spots.ts), the best viewpoint of each,
 // then about --count of them spread over the zones that have a zone map, the
 // best first, leaving out the landmarks drops.json names (pictures looked at
 // and dropped) and filling their zone from the next best. Written to
 // locations.json, the same for the same databases and drops; a landmark kept
 // from the last run keeps its id.
-//   bun scripts/pick.ts [--count 300] [--out locations.json] [--drops drops.json] [--fresh]
+//   bun scripts/pick.ts [--count 420] [--out locations.json] [--drops drops.json] [--fresh]
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import type { Database } from "bun:sqlite";
 import { familyPath } from "../src/family";
 import { type ChunkRow, type DoodadRow, Doodads, Ground, type WmoRow, Wmos } from "../src/ground";
 import { districts, EYE, type Group, type Placed } from "../src/cities";
+import { camps, type Spot, spotLandmarks } from "../src/spots";
 import type { Vec } from "../src/frame";
 import { choose, type Landmark, type Limits, landmarks, named, STRICT, type Viewpoint, viewpoint, WIDE, type World } from "../src/landmarks";
 import { quotas } from "../src/pick";
@@ -22,9 +24,9 @@ const arg = (name: string, fallback: string) => {
   const i = process.argv.indexOf(`--${name}`);
   return i >= 0 ? process.argv[i + 1] : fallback;
 };
-const COUNT = Number(arg("count", "300")), OUT = arg("out", "locations.json"), DROPS = arg("drops", "drops.json");
+const COUNT = Number(arg("count", "420")), OUT = arg("out", "locations.json"), DROPS = arg("drops", "drops.json");
 // a zone with places gets at least MIN of them, at most CAP
-const MIN = 4, CAP = 12;
+const MIN = 6, CAP = 12;
 // a city (its districts) at least this many
 const CITY = 6;
 // a doodad's whole box hides what is behind it over this share of its width
@@ -210,7 +212,46 @@ const count = (list: Found[], z: number) => list.filter((f) => f.zone === z).len
 const shortWant = new Map([...zones].map((z) => [z, want.get(z) ?? MIN] as const).filter(([z, n]) => count(first, z) < n));
 const strict = new Set(found.map((f) => `${f.landmark.map}:${f.landmark.box.unique_id}`));
 const wide = seen(WIDE, new Set(shortWant.keys()), strict);
-const chosen = [...first, ...choose(wide, shortWant, named(name), first)];
+const second = [...first, ...choose(wide, shortWant, named(name), first)];
+
+// a zone still short: the spots (src/spots.ts): camps where creatures
+// gather, flight masters, graveyards, each the doodads standing around it,
+// the buildings' names kept out
+const spotList: Spot[] = [];
+for (const map of MAPS) {
+  // (the Classic database's spawns, which carry an id of their own)
+  const creatures = db.query("SELECT spawn_id id, x, y, z FROM spawn WHERE kind = 'creature' AND map_id = ? AND x IS NOT NULL AND spawn_id IS NOT NULL ORDER BY spawn_id").all(map) as { id: number; x: number; y: number; z: number }[];
+  spotList.push(...camps(map, creatures.map((c) => [c.x, c.y, c.z] as Vec), creatures.map((c) => c.id)));
+  for (const t of db.query("SELECT ID id, Pos_0 x, Pos_1 y FROM client_TaxiNodes WHERE ContinentID = ? ORDER BY ID").all(map) as { id: number; x: number; y: number }[]) spotList.push({ map, x: t.x, y: t.y, kind: "flight master", id: t.id });
+  for (const g of db.query("SELECT id, x, y FROM graveyard WHERE map_id = ? ORDER BY id").all(map) as { id: number; x: number; y: number }[]) spotList.push({ map, x: g.x, y: g.y, kind: "graveyard", id: g.id });
+}
+// (strict, then WIDE for a zone short after them: the zone's own ground,
+// the camera inside a big box, doodads in the way within 20 yards only)
+// (a place two of whose pictures were dropped by eye gets no more spots:
+// its next ones were no better, round after round on 30 October; a zone's
+// own name too, which shuts its unnamed ground to WIDE's spots)
+const tired = new Set(Object.entries(Object.groupBy(drops.filter((d) => d.by !== "render"), (d) => `${d.map}:${d.name.toLowerCase()}`)).filter(([, l]) => (l?.length ?? 0) >= 2).map(([k]) => k));
+const spotPass = (limits: Limits, before: Found[]) => {
+  const short = new Map([...zones].map((z) => [z, want.get(z) ?? MIN] as const).filter(([z, n]) => count(before, z) < n));
+  const out: Found[] = [];
+  for (const map of MAPS) {
+    const world = worlds.get(map)!;
+    const skip = (k: number) => dropped.has(`${map}:${k}`) || before.some((f) => f.landmark.map === map && f.landmark.box.unique_id === k);
+    for (const l of spotLandmarks(spotList.filter((s) => s.map === map), world.ground, world.leaves, zoneOf, place, limits, skip)) {
+      const zone = zoneOf(l.area);
+      if (!short.has(zone) || tired.has(`${map}:${named(name)(l).toLowerCase()}`)) continue;
+      const key = `${map}:${l.box.unique_id}`;
+      triedKeys.add(key);
+      const v = viewpoint(l, world, limits);
+      if (v) {
+        out.push({ landmark: l, view: v, zone, widened: limits !== STRICT });
+        unseenKeys.delete(key);
+      } else unseenKeys.add(key);
+    }
+  }
+  return [...before, ...choose(out, short, named(name), before)];
+};
+const chosen = spotPass(WIDE, spotPass(STRICT, second));
 for (const f of chosen) if (!want.has(f.zone)) want.set(f.zone, MIN);
 const tried = triedKeys.size, unseen = unseenKeys.size;
 
@@ -247,7 +288,7 @@ writeFileSync(
   OUT,
   `${JSON.stringify(
     {
-      about: "Cameras for geoguessr's renders, each looking at a landmark (a WMO in a named place, or a city's district: a WMO group the client names), by scripts/pick.ts from wow-data's classic.db and classic-terrain.db. x, y, z: world yards (the camera's eye). lookAt: the landmark's lower middle, world yards. yaw: the game's facing in radians (0 north, +x, a quarter turn west, +y), pitch: radians up, both toward lookAt. ground: the height the eye stands over. zone, subzone: AreaTable ids (a district's subzone is its city), name: the subzone's name (a district's: client_WMOAreaTable's), kind: building or district, wmo: the landmark's placement id (a district's: -(placement * 1000 + group index)), widened: found by the looser rules of a zone short of landmarks (src/landmarks.ts WIDE). fill, sky: the share of the picture the landmark and the sky take (a coarse cast), score: the viewpoint's (a district: no cast, fill and sky 0, scored by its size). landmarks, unseen: the WMOs tried and those seen from nowhere (districts not counted). dropped: the entries drops.json lists. perZone: the cameras of each zone, share: what it was due (a zone under it ran short of landmarks). nextId: the id the next new camera takes (ids stay with their landmark from run to run).",
+      about: "Cameras for geoguessr's renders, each looking at a landmark (a WMO in a named place, a city's district: a WMO group the client names, or a spot: the doodads around a camp, a flight master or a graveyard), by scripts/pick.ts from wow-data's classic.db and classic-terrain.db. x, y, z: world yards (the camera's eye). lookAt: the landmark's lower middle, world yards. yaw: the game's facing in radians (0 north, +x, a quarter turn west, +y), pitch: radians up, both toward lookAt. ground: the height the eye stands over. zone, subzone: AreaTable ids (a district's subzone is its city), name: the subzone's name (a district's: client_WMOAreaTable's), kind: building, district, camp, flight master or graveyard, wmo: the landmark's placement id (a district's: -(placement * 1000 + group index), a spot's: -((2 + its kind's place among camp, flight master, graveyard) * 1e9 + its database id: a camp's seed spawn_id, a TaxiNodes ID, a graveyard id)), widened: found by the looser rules of a zone short of landmarks (src/landmarks.ts WIDE). fill, sky: the share of the picture the landmark and the sky take (a coarse cast), score: the viewpoint's (a district: no cast, fill and sky 0, scored by its size). landmarks, unseen: the WMOs and spots tried and those seen from nowhere (districts not counted). dropped: the entries drops.json lists. perZone: the cameras of each zone, share: what it was due (a zone under it ran short of landmarks). nextId: the id the next new camera takes (ids stay with their landmark from run to run).",
       wowData: tag,
       terrainBuild: terrainMeta("build"),
       terrainParser: terrainMeta("parser"),
@@ -264,7 +305,7 @@ writeFileSync(
   )}\n`,
 );
 console.log(
-  `${picked.length} cameras of ${found.length + wide.length} landmarks seen (${tried} tried, ${unseen} with no good viewpoint, ${drops.length} dropped, ${chosen.length - first.length} widened) in ${want.size} zones -> ${OUT}`,
+  `${picked.length} cameras of ${found.length + wide.length} buildings and districts seen (${tried} tried, ${unseen} with no good viewpoint, ${drops.length} dropped, ${chosen.length - first.length} past the strict buildings: WIDE and spots) in ${want.size} zones -> ${OUT}`,
 );
 const thin = [...want].filter(([z, n]) => count(chosen, z) < n).map(([z, n]) => `${name(z)} ${count(chosen, z)}/${n}`);
 if (thin.length) console.log(`under their share: ${thin.join(", ")}`);

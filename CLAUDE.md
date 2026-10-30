@@ -11,7 +11,7 @@ WoW addons folder but not an addon.
 
 - `bun run check`: the check (tsc, bun test). Run it through q: `bun harness/q.ts check -- bun run check`.
 - `bun scripts/pick.ts`: `locations.json`, a camera on each chosen landmark (a WMO in a
-  named place, a city's district), from wow-data's classic.db and classic-terrain.db
+  named place, a city's district, a camp, a flight master, a graveyard), from wow-data's classic.db and classic-terrain.db
   (`bun wow-data/bin/terrain.ts classic` first; `docs/picker.md`).
 - `bun scripts/render.ts --renderer <binary> --workdir <dir> --casc <dir>`: a sample rendered,
   checked and laid on contact sheets in `.cache/renders/` (`--all`: every one).

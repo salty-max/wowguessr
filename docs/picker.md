@@ -89,6 +89,49 @@ Lordaeron its one outdoors). Thunder Bluff is terrain with small WMOs
 (each rise a WMO of its own, its groups unnamed but the Pools of Vision):
 no district.
 
+## Spots: camps, flight masters, graveyards (`src/spots.ts`, 30 October 2026)
+
+A zone still under its share after the buildings (strict, then `WIDE`) gets
+spots, landmarks that aren't WMOs: a camp (3 or more creature spawns of the
+Classic database within 20 yards of the first, its seed: the densest first,
+each spawn in one camp, `spawn`), a flight master (`client_TaxiNodes`), a
+graveyard (`graveyard`). The game's creatures and objects aren't in the map
+files, so the renderer draws none: a spot's subject is the doodads standing
+within 14 yards of it (their middles), 1.5 yards high or more and 10 at most
+across (tents, a roost, totems, tombstones, a dig site's carts: not a tree's
+crown or a cliff piece that only touches the circle, which would become the
+subject and see through itself), their boxes together 6 to 160 yards across
+and 3 high. Named by the subzone under it, the buildings' rules otherwise
+(not the zone's own ground, a place, not in water, two a subzone 80 yards
+apart, the biggest first), the same camera search, its own doodads not in
+its way (a tent in the box is the camp, not a wall). Strict first, then
+`WIDE`, the buildings' names kept out. Its key (`drops.json`, `wmo`):
+-((2 + kind) * 1e9 + its database id: a camp's seed spawn_id, a flight
+master's TaxiNodes ID, a graveyard's id), the same while the data is. A
+place with two pictures dropped by eye (not timeouts) gets no more spots: the
+next ones were the same bare ground, round after round. A zone's own name
+counts too, which shuts its unnamed ground to `WIDE`'s spots.
+
+Not built: dungeon entrances (the server's teleport triggers aren't in
+wow-data), inns (an NPC's flag inside a building already pictured), named
+rocks, islands and waterfalls (nothing names a doodad or a terrain shape:
+the user's list, `src/extra-landmarks.json`, is for those).
+
+The rounds (30 October 2026): the target raised to 420 cameras, at least 6 a
+zone. A first try took big doodads that only touched a spot's circle into
+its box (a tree's crown, a cliff piece) and keyed spots by their rounded
+place: its picks were redone from scratch once both were fixed. Then 132 new
+cameras rendered and looked at (buildings deeper in each zone's list, camps,
+graveyards): about 90 read as a place (Theramore, Brackenwall Village, the
+dig sites, the Ashenvale and Darkshore camps, the satyrs' red ruins,
+Freewind Post, Coldridge Pass, Thunder Bluff's Spirit Rise), the rest bare
+snow, trees, a slope in the face, Winterspring's violet light, or timeouts.
+Four rounds of refills after it, each mostly worse (a place's next spot).
+**333 cameras in 46 zones**: 217 buildings, 82 camps, 25 districts, 9
+graveyards, a flight master (the others stand in towns a building already
+names). Short of the 350 to 450 asked, and some zones still thin: Un'Goro 0,
+Thunder Bluff 1, Darnassus 2, the Swamp of Sorrows and Deadwind Pass 3.
+
 ## The viewpoint (`viewpoint`)
 
 16 bearings, 4 distances (12, 30, 55 and 80 yards beyond the box's corners,

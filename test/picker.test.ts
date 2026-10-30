@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { apart, CHUNK, type ChunkRow, type DoodadRow, Doodads, Ground, ORIGIN, solid, UNIT, type WmoRow, Wmos } from "../src/ground";
 import { boxShare, project, rayBox, rayGround, raySolid, shoot } from "../src/frame";
 import { districts, type Group, type Placed } from "../src/cities";
+import { camps, spotKey, spotLandmark, spotLandmarks } from "../src/spots";
 import { choose, clear, landmarks, viewpoint, WIDE, type World } from "../src/landmarks";
 import { type Candidate, quotas, random, shuffle, stand } from "../src/pick";
 import { check } from "../src/imagecheck";
@@ -269,6 +270,50 @@ describe("the cities' districts", () => {
     expect(districts([a], new Map())).toEqual([]);
     // a creature on the other continent at the same spot is no camera
     expect(districts([a], new Map([[1, [[30, 70, 0]]]]))).toEqual([]);
+  });
+});
+
+describe("the spots: camps, flight masters, graveyards", () => {
+  const named = (rows: ChunkRow[]) => rows.map((r) => ({ ...r, area_id: 12 }));
+  const zone99 = (a: number) => (a === 12 ? 99 : a);
+  // a tent: 4 by 4 yards, 4 high
+  const tent = (x: number, y: number): DoodadRow => ({ x, y, z: 50, yaw: 0, scale: 1, col_min_x: -2, col_min_y: -2, col_min_z: 0, col_max_x: 2, col_max_y: 2, col_max_z: 4 });
+  test("a camp: 3 creatures within 20 yards, each in one camp; 2 apart are none", () => {
+    const c = camps(0, [[0, 0, 0], [5, 0, 0], [0, 5, 0], [300, 0, 0], [305, 0, 0]], [11, 12, 13, 14, 15]);
+    expect(c.length).toBe(1);
+    expect(c[0].kind).toBe("camp");
+    // keyed by its seed spawn's id
+    expect([11, 12, 13]).toContain(c[0].id);
+    expect(c[0].x).toBeCloseTo(5 / 3);
+  });
+  test("its landmark: the doodads around it, named by the subzone, not a lone one, not in water, a key of its own", () => {
+    const g = new Ground(named(field()));
+    const s = { map: 0, x: mx, y: my, kind: "camp", id: 4242 };
+    const l = spotLandmark(s, g, new Doodads([tent(mx - 4, my), tent(mx + 4, my)]), zone99, () => true)!;
+    expect(l.area).toBe(12);
+    expect(l.kind).toBe("camp");
+    expect(l.box.max_x - l.box.min_x).toBeCloseTo(12);
+    expect(l.box.unique_id).toBe(spotKey(s));
+    expect(spotKey(s)).toBe(-(2e9 + 4242));
+    // a tree whose crown only touches the circle, or a cliff piece, is no part of it
+    const crown: DoodadRow = { x: mx + 20, y: my, z: 50, yaw: 0, scale: 1, col_min_x: -8, col_min_y: -8, col_min_z: 0, col_max_x: 8, col_max_y: 8, col_max_z: 20 };
+    expect(spotLandmark(s, g, new Doodads([tent(mx - 4, my), tent(mx + 4, my), crown]), zone99, () => true)!.box.max_x - mx).toBeCloseTo(6);
+    // one tent: 4 yards across, under 6
+    expect(spotLandmark(s, g, new Doodads([tent(mx, my)]), zone99, () => true)).toBeNull();
+    // on the zone's own ground
+    expect(spotLandmark(s, new Ground(field()), new Doodads([tent(mx - 4, my), tent(mx + 4, my)]), (a) => (a === 12 ? 12 : a), () => true)).toBeNull();
+    // a skipped key (dropped) is no landmark
+    expect(spotLandmarks([s], g, new Doodads([tent(mx - 4, my), tent(mx + 4, my)]), zone99, () => true, undefined, (k) => k === spotKey(s))).toEqual([]);
+  });
+  test("a camp's own tents don't stand in its way: a camera sees it", () => {
+    const g = new Ground(named(field()));
+    const tents = [tent(mx - 5, my), tent(mx + 5, my), tent(mx, my + 5), tent(mx, my - 5)];
+    const l = spotLandmark({ map: 0, x: mx, y: my, kind: "camp", id: 1 }, g, new Doodads(tents), zone99, () => true)!;
+    const world: World = { ground: g, wmos: new Wmos([]), doodads: new Doodads(tents), leaves: new Doodads(tents) };
+    expect(viewpoint(l, world)).not.toBeNull();
+    // the same tents as a building's surroundings would block every heading at eye level
+    expect(clear(mx - 10, my, 53, 0, world, l.box, 60, false)).toBe(false);
+    expect(clear(mx - 10, my, 53, 0, world, l.box, 60, true)).toBe(true);
   });
 });
 

@@ -455,6 +455,384 @@
    "name": "Vault of Ironforge",
    "why": "nothing to guess from (#368, widening of 30 October: a wall in the face or too dark)",
    "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": 197658,
+   "name": "Gallows' Corner",
+   "why": "never rendered: the installed client lacks its files (#401)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": -2000000433,
+   "name": "Coldridge Valley",
+   "why": "nothing to guess from (#525, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000003125,
+   "name": "Chill Breeze Valley",
+   "why": "nothing to guess from (#526, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000004363,
+   "name": "The Tundrid Hills",
+   "why": "nothing to guess from (#527, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -4000000008,
+   "name": "Badlands",
+   "why": "nothing to guess from (#529, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000191642,
+   "name": "Fallow Sanctuary",
+   "why": "nothing to guess from (#537, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -4000000631,
+   "name": "Dustwallow Marsh",
+   "why": "nothing to guess from (#547, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000031459,
+   "name": "Wyrmbog",
+   "why": "nothing to guess from (#549, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000031718,
+   "name": "Bloodfen Burrow",
+   "why": "nothing to guess from (#552, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000031592,
+   "name": "Lost Point",
+   "why": "nothing to guess from (#554, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000031622,
+   "name": "The Dragonmurk",
+   "why": "nothing to guess from (#555, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000089684,
+   "name": "Stendel's Pond",
+   "why": "nothing to guess from (#566, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000089701,
+   "name": "The Dust Plains",
+   "why": "nothing to guess from (#569, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000006210,
+   "name": "Stonewatch Falls",
+   "why": "nothing to guess from (#573, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -4000000099,
+   "name": "Arathi Highlands",
+   "why": "nothing to guess from (#577, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000093192,
+   "name": "The Altar of Zul",
+   "why": "nothing to guess from (#583, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -4000000349,
+   "name": "Aerie Peak",
+   "why": "nothing to guess from (#584, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000093420,
+   "name": "Hiri'watha",
+   "why": "nothing to guess from (#585, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000018149,
+   "name": "North Tide's Hollow",
+   "why": "nothing to guess from (#596, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000049472,
+   "name": "The Oracle Glade",
+   "why": "nothing to guess from (#599, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000048356,
+   "name": "Ban'ethil Hollow",
+   "why": "nothing to guess from (#601, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000036589,
+   "name": "Bashal'Aran",
+   "why": "nothing to guess from (#604, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000036605,
+   "name": "Cliffspring River",
+   "why": "nothing to guess from (#605, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000036985,
+   "name": "Tower of Althalaxx",
+   "why": "nothing to guess from (#607, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000051251,
+   "name": "Dream Bough",
+   "why": "nothing to guess from (#619, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000040672,
+   "name": "Bloodvenom River",
+   "why": "nothing to guess from (#622, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000022674,
+   "name": "Abyssal Sands",
+   "why": "nothing to guess from (#631, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000041330,
+   "name": "Winterspring",
+   "why": "nothing to guess from (#634, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000083930,
+   "name": "Frostsaber Rock",
+   "why": "nothing to guess from (#635, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000042210,
+   "name": "Mazthoril",
+   "why": "nothing to guess from (#636, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000042998,
+   "name": "Twilight Base Camp",
+   "why": "nothing to guess from (#637, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000190120,
+   "name": "Warrior's Terrace",
+   "why": "nothing to guess from (#641, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000026361,
+   "name": "Thunderhorn Water Well",
+   "why": "near-duplicate (#610): the same well as Wildmane Water Well (#609)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000093345,
+   "name": "Zun'watha",
+   "why": "never rendered: the installed client lacks its files (#581)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": -2000093520,
+   "name": "Quel'Danil Lodge",
+   "why": "never rendered: the installed client lacks its files (#582)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": -2000015663,
+   "name": "Nethander Stead",
+   "why": "never rendered: the installed client lacks its files (#612)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": -2000015830,
+   "name": "Durnholde Keep",
+   "why": "never rendered: the installed client lacks its files (#613)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": -2000038813,
+   "name": "Fallow Sanctuary",
+   "why": "nothing to guess from (#645, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000089714,
+   "name": "The Dust Plains",
+   "why": "nothing to guess from (#648, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000093453,
+   "name": "The Altar of Zul",
+   "why": "nothing to guess from (#653, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000093014,
+   "name": "Skulk Rock",
+   "why": "nothing to guess from (#655, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000049458,
+   "name": "The Oracle Glade",
+   "why": "nothing to guess from (#656, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000046520,
+   "name": "Warrior's Terrace",
+   "why": "nothing to guess from (#660, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000026241,
+   "name": "Winterhoof Water Well",
+   "why": "near-duplicate (#658): the same well as Wildmane Water Well (#609)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000011960,
+   "name": "Arathi Highlands",
+   "why": "never rendered: the installed client lacks its files (#651)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": -3000000043,
+   "name": "Aerie Peak",
+   "why": "never rendered: the installed client lacks its files (#652)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": -2000015584,
+   "name": "Durnholde Keep",
+   "why": "never rendered: the installed client lacks its files (#659)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": -2000090354,
+   "name": "Westfall",
+   "why": "nothing to guess from (#661, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000092965,
+   "name": "Skulk Rock",
+   "why": "nothing to guess from (#663, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000048331,
+   "name": "Ban'ethil Hollow",
+   "why": "nothing to guess from (#664, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000024806,
+   "name": "Palemane Rock",
+   "why": "nothing to guess from (#665, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 0,
+   "wmo": -2000092849,
+   "name": "Aerie Peak",
+   "why": "never rendered: the installed client lacks its files (#662)",
+   "by": "render"
+  },
+  {
+   "map": 0,
+   "wmo": -2000087035,
+   "name": "Westfall",
+   "why": "nothing to guess from (#666, widening of 30 October)",
+   "by": "draft"
+  },
+  {
+   "map": 1,
+   "wmo": -2000026267,
+   "name": "Red Rocks",
+   "why": "nothing to guess from (#667, widening of 30 October)",
+   "by": "draft"
   }
  ],
  "empty": [

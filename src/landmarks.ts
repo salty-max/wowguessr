@@ -7,7 +7,7 @@
 // yards or more: a city, a fortress, Gadgetzan's walls) is no landmark: its
 // box is mostly air, so what a camera sees of it can't be told from the box.
 import { boxShare, shoot, type Shot, type Vec, type View } from "./frame";
-import { apart, corners, type Doodads, type Ground, isBuilding, type WmoRow, type Wmos } from "./ground";
+import { apart, corners, type Doodads, type Ground, isBuilding, type Solid, type WmoRow, type Wmos } from "./ground";
 import { type Candidate, stand } from "./pick";
 
 const DEG = Math.PI / 180;
@@ -104,8 +104,10 @@ export type Viewpoint = { view: View; shot: Shot; share: number; distance: numbe
 // a heading kept clear close by: no ground at the eye within 5 yards, no
 // other building's box within 12, no solid doodad near the middle of the
 // frame (any part of it within 30 degrees, looking wider than 20 or within 3
-// yards: the picker's doodad rule; within reach yards)
-export function clear(x: number, y: number, eye: number, yaw: number, world: World, target: WmoRow, reach = STRICT.reach): boolean {
+// yards: the picker's doodad rule; within reach yards; own: a doodad
+// standing in the target's box is the target, a camp's tent, not in the way)
+const within = (b: WmoRow, d: Solid) => d.cx >= b.min_x && d.cx <= b.max_x && d.cy >= b.min_y && d.cy <= b.max_y;
+export function clear(x: number, y: number, eye: number, yaw: number, world: World, target: WmoRow, reach = STRICT.reach, own = false): boolean {
   const dx = Math.cos(yaw), dy = Math.sin(yaw);
   for (const d of [2, 3, 4, 6, 8, 10, 12]) {
     const px = x + dx * d, py = y + dy * d, h = world.ground.height(px, py);
@@ -114,7 +116,7 @@ export function clear(x: number, y: number, eye: number, yaw: number, world: Wor
   }
   return !world.doodads
     .near(x, y, reach)
-    .filter((d) => d.bottom <= eye + 0.5 && d.top >= eye - 0.5)
+    .filter((d) => d.bottom <= eye + 0.5 && d.top >= eye - 0.5 && !(own && within(target, d)))
     .some((d) => {
       const offs = corners(d, x, y).map((b) => ((b - yaw + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
       const lo = Math.min(...offs), hi = Math.max(...offs);
@@ -123,7 +125,8 @@ export function clear(x: number, y: number, eye: number, yaw: number, world: Wor
     });
 }
 
-// The best viewpoint of a landmark, or null: 16 bearings, 4 distances (12,
+// The best viewpoint of a landmark, or null (one of doodads, a camp: its own
+// doodads not in its way): 16 bearings, 4 distances (12,
 // 30, 55 and 80 yards beyond its box's corners, at least 25 from its
 // middle), eyes 3, 6 and 10 yards up, looking down 12 degrees at most. A
 // camera must stand
@@ -150,7 +153,7 @@ export function viewpoint(l: Landmark, world: World, limits: Limits = STRICT): V
         // picture (the lens is 27 degrees each way), a place, not a map
         if (Math.atan2(l.at[2] - eye, distance) < -STEEPEST) continue;
         const yaw = Math.atan2(l.at[1] - y, l.at[0] - x);
-        if (!clear(x, y, eye, yaw, world, l.box, limits.reach)) continue;
+        if (!clear(x, y, eye, yaw, world, l.box, limits.reach, !!l.kind)) continue;
         const view: View = { eye: [x, y, eye], at: l.at };
         const { share, clipped, behind } = boxShare(view, l.box, l.floor);
         if (behind) continue;
@@ -167,6 +170,7 @@ export function viewpoint(l: Landmark, world: World, limits: Limits = STRICT): V
     // (the doodads between the camera and the landmark's far side, ahead of it)
     const [ex, ey] = f.view.eye, toward = Math.atan2(l.at[1] - ey, l.at[0] - ex);
     const blockers = world.leaves.near(ex, ey, Math.hypot(l.at[0] - ex, l.at[1] - ey) + half).filter((d) => {
+      if (l.kind && within(l.box, d)) return false;
       const off = Math.abs(((Math.atan2(d.cy - ey, d.cx - ex) - toward + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
       return off < 60 * DEG || Math.hypot(d.cx - ex, d.cy - ey) < d.reach + 2;
     });
