@@ -4,6 +4,12 @@
   "type": "module",
   "scripts": {
     "test": "bun test",
-    "check": "bun test"
+    "check": "tsc --noEmit && bun test",
+    "pick": "bun scripts/pick.ts",
+    "render": "bun scripts/render.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.0",
+    "typescript": "5.9.3"
   }
 }

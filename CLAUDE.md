@@ -9,14 +9,18 @@ WoW addons folder but not an addon.
 
 ## Commands
 
-- `bun run check`: the check (bun test for now; a typecheck/lint joins it
-  once there is real code). Run it through q: `bun harness/q.ts check -- bun run check`.
+- `bun run check`: the check (tsc, bun test). Run it through q: `bun harness/q.ts check -- bun run check`.
+- `bun scripts/pick.ts`: `locations.json` from wow-data's classic.db (`docs/picker.md`).
+- `bun scripts/render.ts --renderer <binary> --workdir <dir> --casc <dir>`: a sample rendered,
+  checked and laid on a contact sheet in `.cache/renders/`.
 - `bun harness/board.ts list`, `bun harness/hooks.ts status`.
 
 ## Docs
 
 - `docs/render-spike.md`: the render proof (offlineRenderer on macOS, the
   patches, timings, what is open).
+- `docs/picker.md`: the location picker (what it reads, how a camera is
+  chosen, locations.json, the reject rates).
 
 ## Hard rules
 
