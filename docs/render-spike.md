@@ -67,3 +67,26 @@ temporary folder and will not survive a reboot: rebuild from the patch.
   colour-correct the PNGs.
 - Cameras need rejection: the Crossroads shot has a post filling a fifth of
   the frame (the picker's job, spike step 3).
+
+## Rebuilding it (30 October 2026, step 3)
+
+The scratch build was gone a day later and came back from the patch in
+about 20 minutes: `git apply --exclude=3rdparty/zlib` on 1a8cccb with its
+submodules, slang 2026.20's macOS arm64 release (clear its quarantine
+flag), `cmake -G Ninja -DCMAKE_BUILD_TYPE=Release
+-DSLANG_COMPILER=<slangc> -DSPIRV_OPT_APP=/opt/homebrew/bin/spirv-opt`,
+`LIBRARY_PATH=/opt/homebrew/lib ninja offlineRenderer`. Three traps:
+
+- cmake's AddressSanitizer probe (`ADDRESS_SANITIZER_AVAILABLE`) runs a
+  test program that spins for ever on this Mac: kill it, the configure goes
+  on with the check failed.
+- the link wants libidn2: `LIBRARY_PATH=/opt/homebrew/lib`.
+- the binary lands in `build/bin/` but its shaders are `build/spirv/`: run
+  it from `build/` (with `export.db3` there), or it fails with "failed to
+  open file!".
+
+The client's own `.build.info` now names configs that are on disk, so the
+CASC root is a folder with a copy of it and links to the client's
+`Data/config`, `data`, `indices` and `ecache`. A camera whose frame needs a
+file the installed client hasn't downloaded hangs the renderer for ever
+(2 of the first 30): `scripts/render.ts` gives each 30 seconds.
