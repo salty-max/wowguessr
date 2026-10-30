@@ -1,6 +1,6 @@
 # geoguessr (working title)
 
-A WoW Classic geoguessr: a web game that shows a picture of a spot in
+A WoW Classic geoguessr (`salty-max/wowguessr` on GitHub): a web game that shows a picture of a spot in
 Azeroth, the player opens a zone's map from the continent's and clicks where
 it was, a score falls with the distance. The pictures are **rendered from the game files** (not captured
 in game). Plan and evidence: `~/code/wow-addons/ideas/geoguessr.md`. A
@@ -49,9 +49,12 @@ WoW addons folder but not an addon.
   (and `dist/` and `--marks`' `.cache/site/`, all gitignored) only, never
   committed. Putting them on a public page is the user's go, asked
   before any deploy.
-- **No deploy, no GitHub repository, no domain, no push** without the user's
-  go, asked in the session that wants it.
-- Local git only for now. The client for renders is
+- **No deploy, no domain, no push** without the user's go, asked in the
+  session that wants it (documentation may be pushed without asking).
+- GitHub: `salty-max/wowguessr`, public since 30 October 2026 (the user's
+  call, "wowguessr" a working name: the project's name is still open, and
+  "wow" is Blizzard's mark). The folder stays `geoguessr/`. The client for
+  renders is
   `/Applications/World of Warcraft` (read-only).
 - Plain ASCII in the code, no semicolons in prose players read.
 
