@@ -11,14 +11,18 @@
 //   classic-terrain.db), their names (src/atlas.ts' Atlas). Composed again
 //   with --maps, or when missing.
 // - rounds.json: the cameras of locations.json, as much as the page needs.
-// - pictures/<id>.webp: each camera's render, from --pictures (default
-//   .cache/review3/webp, the pictures the user passed by eye, 30 October
-//   2026). A camera with none refuses the build.
+// - pictures/<id>.webp: each camera's render at its full 1280x720, quality
+//   88. The picture the user passed by eye is --pictures' (default
+//   .cache/review3/webp, 30 October 2026: 1024 wide, quality 80), and its
+//   original is the render's PNG in .cache/ that matches it (scaled down, an
+//   RMSE under 0.03: the light changed between batches, so the newest PNG of
+//   a camera isn't always the one passed). A camera with no picture refuses
+//   the build, one with no original keeps its 1024 one (said).
 // - --marks: .cache/site/marks/<ui>.png, every camera on its zone's map (a
 //   red dot), and .cache/site/marks.jpg, all of them on one sheet, to look
 //   at the conversion (the game's art too: .cache/ is never committed).
 import type { Database } from "bun:sqlite";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { areaRuns } from "../src/areas";
@@ -171,18 +175,47 @@ for (const l of locations) {
 writeFileSync(path.join(SITE, "rounds.json"), JSON.stringify(rounds));
 if (astray.length) console.log(`${astray.length} cameras stand outside their zone on the map's areas:\n  ${astray.join("\n  ")}`);
 
-// the pictures: rendered ones only, each camera's
+// the pictures: rendered ones only, each camera's, from its original
 const missing = locations.filter((l) => !existsSync(path.join(args.pictures!, `${l.id}.webp`))).map((l) => l.id);
 if (missing.length) throw new Error(`no picture in ${args.pictures} for ${missing.length} cameras: ${missing.join(", ")}`);
+const renders = readdirSync(path.join(ROOT, ".cache")).filter((d) => statSync(path.join(ROOT, ".cache", d)).isDirectory());
+// which passed picture each written one came from (its path, size, time): a
+// copy is kept only while that is still the picture passed
+const stampFile = path.join(ROOT, ".cache", "site", "pictures.json");
+const stamps: Record<number, string> = existsSync(stampFile) ? JSON.parse(readFileSync(stampFile, "utf8")) : {};
 let copied = 0;
+const small: number[] = [];
 for (const l of locations) {
-  const from = path.join(args.pictures!, `${l.id}.webp`), to = path.join(SITE, "pictures", `${l.id}.webp`);
-  if (existsSync(to) && statSync(to).size === statSync(from).size && statSync(to).mtimeMs >= statSync(from).mtimeMs) continue;
-  copyFileSync(from, to);
+  const passed = path.join(args.pictures!, `${l.id}.webp`), to = path.join(SITE, "pictures", `${l.id}.webp`);
+  // kept while the stamp says it was written from this very passed picture
+  const stamp = `${passed}:${statSync(passed).size}:${statSync(passed).mtimeMs}`;
+  if (existsSync(to) && stamps[l.id] === stamp) continue;
+  // the original: a render of this camera that, scaled to the passed picture, is the same picture
+  const original = renders
+    .map((d) => path.join(ROOT, ".cache", d, `${l.id}.png`))
+    .filter(existsSync)
+    .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)
+    .find((png) => {
+      const r = Bun.spawnSync(["magick", "compare", "-metric", "RMSE", "(", png, "-resize", "1024x", ")", passed, "null:"]);
+      const rmse = Number(r.stderr.toString().match(/\(([\d.e+-]+)\)/)?.[1] ?? 1);
+      return rmse < 0.03;
+    });
+  if (original) {
+    const r = Bun.spawnSync(["magick", original, "-quality", "88", to]);
+    if (r.exitCode !== 0) throw new Error(`magick: ${r.stderr.toString()}`);
+  } else {
+    copyFileSync(passed, to);
+    small.push(l.id);
+  }
+  // a fallback is tried again next time (its original may turn up), a written original is kept
+  if (original) stamps[l.id] = stamp;
+  else delete stamps[l.id];
   copied++;
 }
-
-console.log(`web/public/: ${rounds.length} rounds, ${copied} pictures copied`);
+mkdirSync(path.dirname(stampFile), { recursive: true });
+writeFileSync(stampFile, JSON.stringify(stamps));
+if (small.length) console.log(`${small.length} pictures with no original, kept at 1024: ${small.join(", ")}`);
+console.log(`web/public/: ${rounds.length} rounds, ${copied} pictures written`);
 
 // the marks, to look at: each zone's map with its cameras, then one sheet
 if (args.marks) {

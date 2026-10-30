@@ -3,10 +3,11 @@ import { createPortal } from "react-dom";
 import { picture } from "../data";
 import { Frame } from "./Frame";
 
-// The round's picture: the whole scene behind the map on a wide screen (cut
-// to fill it), framed above the map on a narrow one, and whole on a click or
-// F (Esc closes: App keeps the keys). The whole picture is drawn over the
-// page from document.body, the page under it inert while it is open.
+// The round's picture, whole and framed: as large as the space allows, never
+// past its own 1280x720 (a render scaled up is a blur), the map beside it on
+// a wide screen, under it on a narrow one. Larger on a click or F (Esc
+// closes: App keeps the keys), drawn over the page from document.body, the
+// page under it inert while it is open.
 export function PicturePanel({
   id,
   round,
@@ -20,52 +21,38 @@ export function PicturePanel({
   whole: boolean;
   onWhole: (whole: boolean) => void;
 }) {
-  const label = (
-    <span className="font-display text-xs font-bold tracking-[0.2em] text-gold-300 uppercase">
-      Round {round} of {rounds}
-    </span>
-  );
-  const enlarge = (
-    <button
-      className="btn-ghost size-9"
-      onClick={() => setBig(true)}
-      aria-label="See it whole"
-      title="See it whole (F)"
-    >
-      <Maximize2 size={16} />
-    </button>
-  );
   return (
     <>
-      {/* a wide screen: the scene */}
-      <section className="absolute inset-0 hidden overflow-hidden lg:block">
-        <img
-          key={id}
-          src={picture(id)}
-          alt="A place somewhere on the two continents"
-          className="size-full animate-fade object-cover"
-        />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgb(0_0_0/0.55))]" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/50 to-transparent" />
-        <div className="absolute top-4 left-5 flex items-center gap-3 rounded-[3px] border border-gold-700/70 bg-ink-950/70 px-3 py-1.5 backdrop-blur-sm">
-          {label}
-          <span className="text-[11px] text-parch-300/60">F to see it whole {"\u00b7"} Enter to guess</span>
+      <section className="flex min-w-0 flex-col items-center lg:h-full lg:justify-center">
+        {/* the frame and the line under it, as wide as the picture */}
+        <div className="flex max-w-full flex-col gap-2">
+          <Frame className="max-w-full">
+            <img
+              key={id}
+              src={picture(id)}
+              width={1280}
+              height={720}
+              alt="A place somewhere on the two continents"
+              className="block aspect-video h-auto w-full max-w-[min(100%,1280px)] animate-fade bg-black lg:max-h-[calc(100dvh-10rem)] lg:w-auto"
+            />
+            <button
+              className="btn-ghost absolute top-3 right-3 size-9 opacity-80 hover:opacity-100"
+              onClick={() => setBig(true)}
+              aria-label="See it larger"
+              title="See it larger (F)"
+            >
+              <Maximize2 size={16} />
+            </button>
+          </Frame>
+          <p className="flex items-baseline gap-3 px-1">
+            <span className="font-display text-xs font-bold tracking-[0.2em] text-gold-300 uppercase">
+              Round {round} of {rounds}
+            </span>
+            <span className="hidden text-xs text-parch-300/60 sm:inline">
+              F to see it larger {"\u00b7"} Enter to guess
+            </span>
+          </p>
         </div>
-        <div className="absolute top-4 right-5">{enlarge}</div>
-      </section>
-
-      {/* a narrow screen: framed above the map */}
-      <section className="flex flex-col gap-2 lg:hidden">
-        <Frame>
-          <img
-            key={id}
-            src={picture(id)}
-            alt="A place somewhere on the two continents"
-            className="aspect-video w-full bg-black object-cover"
-          />
-          <div className="absolute top-3 right-3">{enlarge}</div>
-        </Frame>
-        <p className="px-1">{label}</p>
       </section>
 
       {big &&
@@ -77,7 +64,7 @@ export function PicturePanel({
             aria-label="The picture, whole"
             onClick={() => setBig(false)}
           >
-            <Frame className="max-h-full max-w-[min(100%,177vh)]">
+            <Frame className="max-h-full max-w-[min(100%,177vh,1286px)]">
               <img src={picture(id)} alt="" className="max-h-[calc(100vh-5rem)] w-full object-contain" />
             </Frame>
             <button className="btn-ghost absolute top-4 right-4 size-10" aria-label="Close" autoFocus>

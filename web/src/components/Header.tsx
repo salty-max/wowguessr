@@ -20,31 +20,28 @@ function Pip({ played, current }: { played?: Played; current: boolean }) {
   );
 }
 
+// the bar over a game: the title, a pip a round, the score
 export function Header({
   rounds,
   at,
   results,
   total,
-  playing,
 }: {
   rounds: number;
   at: number;
   results: Played[];
   total: number;
-  playing: boolean;
 }) {
   return (
     <header className="relative z-20 flex items-center justify-between gap-4 border-b border-gold-700/60 bg-gradient-to-b from-ink-800 to-ink-900 px-4 py-2.5 shadow-[0_1px_0_#000,0_8px_24px_rgb(0_0_0/0.6)] sm:px-6">
       <h1 className="gold-text font-display text-base font-black tracking-wider whitespace-nowrap sm:text-2xl">
         Where is this?
       </h1>
-      {playing && (
-        <ol className="flex items-center gap-2.5 sm:gap-4" aria-label="Rounds">
-          {Array.from({ length: rounds }, (_, i) => (
-            <Pip key={i} played={results[i]} current={i === at && !results[i]} />
-          ))}
-        </ol>
-      )}
+      <ol className="flex items-center gap-2.5 sm:gap-4" aria-label="Rounds">
+        {Array.from({ length: rounds }, (_, i) => (
+          <Pip key={i} played={results[i]} current={i === at && !results[i]} />
+        ))}
+      </ol>
       <div className="flex items-baseline gap-2">
         <span className="hidden font-display text-[11px] tracking-[0.2em] text-gold-600 uppercase sm:inline">
           Score

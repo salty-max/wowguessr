@@ -41,9 +41,23 @@ The look is Classic's own interface drawn in CSS (`web/src/styles.css`):
 dark leather, gold trim with a gem at each corner, the red panel button, the
 tooltip's ink, parchment. No interface texture of the game's: only its maps.
 
-On a wide screen the picture fills the page and the map is docked bottom
-right, 400 pixels until hovered (760), 1000 for the reveal. On a narrow one
-(a phone) the picture sits framed above the map.
+The picture is shown whole (never cut to fill) and never past its own
+1280x720: a render scaled up is a blur. A blurred, darkened copy of it fills
+the page behind. On a wide screen the map has its own column on the right
+(420 pixels, 520 from 1536 wide), growing over the picture on a hover (760)
+and for the reveal (1000), each kept inside the window's height. On a narrow
+one (a phone) the picture sits above the map, the reveal's card above its
+button. The header shows only during a game: the intro and the summary have
+their own titles. The intro and the summary scroll when the window is too
+short for them (the summary fits a 1430x660 window whole).
+
+The first layout (30 October 2026) cut the picture to fill the page and
+scaled the 1024-wide renders up to 2000 pixels: the user's window showed a
+blurred slice of each. Its play screen also kept the summary from scrolling.
+Looked at only at 1440x900 then, never at the user's window: the sizes are
+now checked by a headless Chrome game (a scratch script, not in the
+repository) at 1430x660 (the user's), 1440x900, 1920x1080 and a phone
+(390x844), five rounds and the summary each, no console error.
 
 ## A game
 
@@ -134,10 +148,18 @@ Silverpine, the Wetlands and Desolace).
 
 ## The pictures
 
-`--pictures` (default `.cache/review3/webp`, the 1024x576 WebPs the user
-passed by eye on 30 October 2026) copied to `web/public/pictures/<id>.webp`. A
-camera with no picture refuses the build. Rendered pictures only, nothing of
-the client's.
+Each camera's render at its full 1280x720, quality 88, in
+`web/public/pictures/<id>.webp`, from its original PNG in `.cache/`: the one
+that, scaled to 1024, matches the WebP the user passed by eye (`--pictures`,
+default `.cache/review3/webp`, 1024 wide, quality 80; an RMSE under 0.03, as
+the light changed between batches). All 341 found their original.
+`.cache/site/pictures.json` stamps which passed picture each was written
+from (its path, size, time): a run writes only what changed (about a minute
+for all 341, nothing when none did). The larger view (F) is capped at the
+same 1280x720. A camera
+with no picture refuses the build. Rendered pictures only, nothing of the
+client's. Sharper still would take re-rendering at 1920x1080 (the renderer
+is a scratch build, gone since: `docs/render-spike.md` rebuilds it).
 
 ## Five rounds on the game's maps (30 October 2026)
 

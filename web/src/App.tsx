@@ -56,65 +56,63 @@ export function App() {
 
   return (
     <div className="flex h-full flex-col" inert={whole}>
-      <Header
-        rounds={s.rounds.length || ROUNDS}
-        at={s.at}
-        results={s.results}
-        total={total(s)}
-        playing={s.phase === "play"}
-      />
-      <main className="relative min-h-0 flex-1 overflow-auto lg:overflow-hidden">
+      {s.phase === "play" && <Header rounds={s.rounds.length} at={s.at} results={s.results} total={total(s)} />}
+      <main className={clsx("relative min-h-0 flex-1 overflow-auto", s.phase === "play" && "lg:overflow-hidden")}>
         {error && <p className="p-8 text-center text-truth">{error}</p>}
-        {s.phase !== "play" && <Backdrop id={s.phase === "summary" ? round?.id : data?.cover} />}
+        <Backdrop id={s.phase === "intro" ? data?.cover : round?.id} />
         {s.phase === "intro" && <Intro onPlay={start} ready={!!data} />}
         {s.phase === "summary" && <Summary results={s.results} onAgain={start} />}
         {s.phase === "play" && data && round && (
-          <div className="relative flex flex-col gap-5 p-4 sm:p-6 lg:block lg:h-full lg:p-0">
-            <PicturePanel id={round.id} round={s.at + 1} rounds={s.rounds.length} whole={whole} onWhole={setWhole} />
-            {/* the map: below the picture on a narrow screen, docked over the scene on a
-                wide one, small until hovered, large for the reveal */}
-            <div
-              className={clsx(
-                "flex min-w-0 flex-col gap-3 lg:absolute lg:right-5 lg:bottom-5 lg:z-10 lg:rounded-[5px] lg:border lg:border-gold-700/50 lg:bg-ink-950/80 lg:p-3 lg:shadow-[0_0_0_1px_#000,0_24px_60px_-10px_rgb(0_0_0/0.9)] lg:backdrop-blur-md lg:transition-[width] lg:duration-300 lg:ease-out",
-                s.revealed
-                  ? "lg:w-[min(1000px,calc(100vw-40px),calc((100vh-330px)*1.5))]"
-                  : "lg:w-[400px] lg:focus-within:w-[min(760px,calc(100vw-40px),calc((100vh-330px)*1.5))] lg:hover:w-[min(760px,calc(100vw-40px),calc((100vh-330px)*1.5))]",
-              )}
-            >
-              <MapPanel
-                key={s.at}
-                atlases={data.atlases}
-                view={s.view}
-                onView={(view) => dispatch({ type: "view", view })}
-                guess={s.guess}
-                onPlace={(g) => dispatch({ type: "place", guess: g })}
-                truth={s.revealed ? round : null}
-              />
-              <div className="flex min-h-[64px] items-center gap-4 px-1">
-                {played ? (
-                  <ResultCard
-                    round={played.round}
-                    result={played.result}
-                    continent={data.atlases.get(round.map)!.name}
-                  />
-                ) : (
-                  <p className="flex-1 text-sm text-parch-300/70">
-                    {s.view.ui == null
-                      ? "Open a zone on the map."
-                      : s.guess
-                        ? "Happy with it? Guess."
-                        : "Click where you think this is."}
-                  </p>
+          <div className="flex flex-col gap-5 p-4 sm:p-6 lg:h-full lg:flex-row lg:gap-6 lg:p-5">
+            <div className="min-w-0 lg:flex-1">
+              <PicturePanel id={round.id} round={s.at + 1} rounds={s.rounds.length} whole={whole} onWhole={setWhole} />
+            </div>
+            {/* the map: under the picture on a narrow screen, its own column on a wide
+                one, growing over the picture on a hover and for the reveal */}
+            <div className="relative lg:w-[420px] lg:shrink-0 2xl:w-[520px]">
+              <div
+                className={clsx(
+                  "flex min-w-0 flex-col gap-3 lg:absolute lg:top-1/2 lg:right-0 lg:z-10 lg:-translate-y-1/2 lg:rounded-[5px] lg:border lg:border-gold-700/50 lg:bg-ink-950/85 lg:p-3 lg:shadow-[0_0_0_1px_#000,0_24px_60px_-10px_rgb(0_0_0/0.9)] lg:backdrop-blur-md lg:transition-[width] lg:duration-300 lg:ease-out",
+                  s.revealed
+                    ? "lg:w-[min(1000px,calc(100vw-40px),calc((100dvh-300px)*1.5))]"
+                    : "lg:w-[420px] lg:focus-within:w-[min(760px,calc(100vw-40px),calc((100dvh-300px)*1.5))] lg:hover:w-[min(760px,calc(100vw-40px),calc((100dvh-300px)*1.5))] 2xl:w-[520px]",
                 )}
-                {s.revealed ? (
-                  <button className="btn-red shrink-0" onClick={next}>
-                    {s.at + 1 < s.rounds.length ? "Next round" : "The summary"}
-                  </button>
-                ) : (
-                  <button className="btn-red shrink-0" onClick={guess} disabled={!s.guess}>
-                    Guess
-                  </button>
-                )}
+              >
+                <MapPanel
+                  key={s.at}
+                  atlases={data.atlases}
+                  view={s.view}
+                  onView={(view) => dispatch({ type: "view", view })}
+                  guess={s.guess}
+                  onPlace={(g) => dispatch({ type: "place", guess: g })}
+                  truth={s.revealed ? round : null}
+                />
+                <div className="flex min-h-[64px] flex-col items-stretch gap-3 px-1 sm:flex-row sm:items-center sm:gap-4">
+                  {played ? (
+                    <ResultCard
+                      round={played.round}
+                      result={played.result}
+                      continent={data.atlases.get(round.map)!.name}
+                    />
+                  ) : (
+                    <p className="flex-1 text-sm text-parch-300/70">
+                      {s.view.ui == null
+                        ? "Open a zone on the map."
+                        : s.guess
+                          ? "Happy with it? Guess."
+                          : "Click where you think this is."}
+                    </p>
+                  )}
+                  {s.revealed ? (
+                    <button className="btn-red shrink-0" onClick={next}>
+                      {s.at + 1 < s.rounds.length ? "Next round" : "The summary"}
+                    </button>
+                  ) : (
+                    <button className="btn-red shrink-0" onClick={guess} disabled={!s.guess}>
+                      Guess
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

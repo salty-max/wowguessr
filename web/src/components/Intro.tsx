@@ -17,7 +17,7 @@ function Step({ icon, title, children }: { icon: ReactNode; title: string; child
 // the first page: what the game is, how a round goes
 export function Intro({ onPlay, ready }: { onPlay: () => void; ready: boolean }) {
   return (
-    <div className="grid min-h-full place-items-center p-4 sm:p-8">
+    <div className="grid min-h-full grid-cols-[minmax(0,1fr)] place-items-center p-4 sm:p-8">
       <section className="parchment w-full max-w-lg animate-rise px-6 py-8 sm:px-10">
         <h2 className="text-center font-display text-3xl font-black tracking-wide text-parch-900 sm:text-4xl">
           Where is this?

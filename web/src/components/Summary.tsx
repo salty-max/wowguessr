@@ -10,16 +10,16 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 export function Summary({ results, onAgain }: { results: Played[]; onAgain: () => void }) {
   const total = results.reduce((s, p) => s + p.result.points, 0);
   return (
-    <div className="grid min-h-full place-items-center p-4 sm:p-8">
-      <section className="parchment w-full max-w-2xl animate-rise px-5 py-7 sm:px-9">
+    <div className="grid min-h-full grid-cols-[minmax(0,1fr)] place-items-center p-4">
+      <section className="parchment w-full max-w-2xl animate-rise px-5 py-5 sm:px-9">
         <p className="text-center font-display text-xs tracking-[0.3em] text-parch-700 uppercase">Journey's end</p>
-        <h2 className="mt-1 text-center font-display text-5xl font-black text-parch-900 tabular-nums">
+        <h2 className="mt-1 text-center font-display text-4xl font-black text-parch-900 tabular-nums">
           <CountUp value={total} ms={1200} from={0} />
         </h2>
         <p className="text-center text-sm text-parch-700">of {fmt(ROUND_MAX * results.length)} points</p>
         <p className="mt-2 text-center font-display text-xl font-bold text-[#7a2a12]">{rank(total, results.length)}</p>
-        <div className="rule text-parch-700/50" />
-        <ol className="flex flex-col gap-2.5">
+        <div className="rule my-3 text-parch-700/50" />
+        <ol className="flex flex-col gap-2">
           {results.map(({ round, result }, i) => (
             <li
               key={round.id}
@@ -29,10 +29,10 @@ export function Summary({ results, onAgain }: { results: Played[]; onAgain: () =
               <img
                 src={picture(round.id)}
                 alt=""
-                className="aspect-video w-24 shrink-0 rounded-[2px] object-cover shadow-[0_0_0_1px_#000] sm:w-32"
+                className="aspect-video w-20 shrink-0 rounded-[2px] object-cover shadow-[0_0_0_1px_#000] sm:w-24"
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-display font-bold text-parch-900">{round.name}</p>
+                <p className="font-display leading-tight font-bold text-parch-900 sm:truncate">{round.name}</p>
                 <p className="truncate text-xs text-parch-700">
                   {round.zoneName && round.zoneName !== round.name && (
                     <>
@@ -56,7 +56,7 @@ export function Summary({ results, onAgain }: { results: Played[]; onAgain: () =
             </li>
           ))}
         </ol>
-        <div className="mt-7 flex justify-center">
+        <div className="mt-4 flex justify-center">
           <button className="btn-red px-8 py-3" onClick={onAgain} autoFocus>
             <RotateCcw size={16} /> Play again
           </button>

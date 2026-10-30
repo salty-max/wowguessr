@@ -16,8 +16,9 @@ WoW addons folder but not an addon.
   checked and laid on contact sheets in `.cache/renders/` (`--all`: every one).
 - `bun run dev`: the game page at http://127.0.0.1:4195 (the family's
   `geoguessr-game` launch entry): `scripts/site.ts` writes the data into
-  `web/public/` (the game's world maps composed, the rounds, the pictures
-  from `.cache/review3/webp`; `--maps` composes the maps again, `--marks`
+  `web/public/` (the game's world maps composed, the rounds, each picture
+  at 1280x720 from its original render in `.cache/`, the one matching what
+  the user passed in `.cache/review3/webp`; `--maps` composes the maps again, `--marks`
   draws every camera on its zone's map), then Vite serves the React app
   (`web/`). `bun run build`: the same into `dist/`. Neither committed.
 - `bun run check`, through q (`bun harness/q.ts check -- bun run check`): tsc

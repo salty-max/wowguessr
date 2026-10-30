@@ -1,6 +1,6 @@
 import { picture } from "../data";
 
-// a picture behind the intro and the summary, blurred and darkened
+// a picture behind the page (the intro's cover, then the round's), blurred and darkened
 export function Backdrop({ id }: { id?: number }) {
   if (id == null) return null;
   return (
